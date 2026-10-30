@@ -58,6 +58,7 @@ def tls_days_left(host: str, timeout: float, now: datetime | None = None) -> int
     """Days until the leaf certificate expires, or None if it cannot be read (the GET itself
     reports invalid certificates; this only feeds the expiry warning)."""
     context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     try:
         with socket.create_connection((host, 443), timeout=timeout) as sock:
             with context.wrap_socket(sock, server_hostname=host) as tls:

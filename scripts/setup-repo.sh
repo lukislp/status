@@ -57,6 +57,7 @@ run() {
 }
 
 TMP="$(mktemp -d)"
+# shellcheck disable=SC2329 # invoked through the trap below
 cleanup() {
   if [ -d "$TMP" ]; then
     # shellcheck disable=SC2016 # $1 is expanded by the inner sh, on purpose
