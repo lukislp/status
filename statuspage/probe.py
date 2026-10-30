@@ -16,6 +16,13 @@ USER_AGENT = "lktec-status/1.0 (+https://status.lktec.org)"
 MAX_BODY = 2 * 1024 * 1024
 
 
+def tls_context() -> ssl.SSLContext:
+    """Certificate-verifying context that refuses anything older than TLS 1.2."""
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
+
 def fetch(url: str, timeout: float) -> dict:
     request = urllib.request.Request(
         url,
@@ -23,7 +30,7 @@ def fetch(url: str, timeout: float) -> dict:
     )
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as resp:  # noqa: S310 (https only, validated in config)
+        with urllib.request.urlopen(request, timeout=timeout, context=tls_context()) as resp:  # noqa: S310 (https only, validated in config)
             body = resp.read(MAX_BODY)
             status = resp.status
             headers = {k.lower(): v for k, v in resp.headers.items()}
@@ -57,8 +64,7 @@ def describe_error(reason) -> str:
 def tls_days_left(host: str, timeout: float, now: datetime | None = None) -> int | None:
     """Days until the leaf certificate expires, or None if it cannot be read (the GET itself
     reports invalid certificates; this only feeds the expiry warning)."""
-    context = ssl.create_default_context()
-    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context = tls_context()
     try:
         with socket.create_connection((host, 443), timeout=timeout) as sock:
             with context.wrap_socket(sock, server_hostname=host) as tls:
