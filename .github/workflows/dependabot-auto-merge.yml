@@ -1,0 +1,23 @@
+name: Dependabot auto-merge
+
+# Thin caller of the shared implementation in lukislp/ci-workflows (auto-merge of Dependabot
+# patch/minor updates, update-stale for every PR that is behind the tip) - the triggers stay
+# here because a reusable workflow cannot declare them for the caller. Needs the AUTOMERGE_TOKEN
+# repository secret (fine-grained PAT, contents + pull requests write); this repository has to be
+# added to that PAT's repository access by hand.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, auto_merge_enabled]
+  schedule:
+    - cron: "47 * * * *"
+  push:
+    branches: [main]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  dependabot:
+    uses: lukislp/ci-workflows/.github/workflows/dependabot-auto-merge.yml@a5f01cccfa7a63023b5a2f67993f771d856c0ee4 # v1.7.1
+    secrets:
+      AUTOMERGE_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}

@@ -1,0 +1,44 @@
+{
+ "days": {
+  "homelabhub-demo": {
+   "2026-10-30": {
+    "fail": 0,
+    "lat_max": 295,
+    "lat_n": 1,
+    "lat_sum": 295,
+    "n": 1,
+    "up": 1.0
+   }
+  },
+  "piwatch-demo": {
+   "2026-10-30": {
+    "fail": 0,
+    "lat_max": 295,
+    "lat_n": 1,
+    "lat_sum": 295,
+    "n": 1,
+    "up": 1.0
+   }
+  },
+  "portfolio": {
+   "2026-10-30": {
+    "fail": 0,
+    "lat_max": 375,
+    "lat_n": 1,
+    "lat_sum": 375,
+    "n": 1,
+    "up": 1.0
+   }
+  },
+  "studylife-demo": {
+   "2026-10-30": {
+    "fail": 0,
+    "lat_max": 295,
+    "lat_n": 1,
+    "lat_sum": 295,
+    "n": 1,
+    "up": 1.0
+   }
+  }
+ }
+}

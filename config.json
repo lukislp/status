@@ -1,0 +1,103 @@
+{
+  "site": {
+    "title": "lktec status",
+    "base_url": "https://status.lktec.org",
+    "owner_name": "Lukas Körber",
+    "home_url": "https://lktec.org",
+    "imprint_url": "https://lktec.org/en/imprint",
+    "privacy_url": "https://lktec.org/en/imprint",
+    "repo_url": "https://github.com/lukislp/status"
+  },
+  "settings": {
+    "timeout_seconds": 15,
+    "retry_delay_seconds": 5,
+    "failure_threshold": 2,
+    "recovery_threshold": 2,
+    "slow_ms": 5000,
+    "tls_warn_days": 7,
+    "retention_days": 90,
+    "publish_interval_minutes": 30
+  },
+  "issues": {
+    "repo": "lukislp/status",
+    "authors": ["lukislp"]
+  },
+  "groups": [
+    {
+      "name": "Website",
+      "components": [
+        {
+          "id": "portfolio",
+          "name": "Portfolio (lktec.org)",
+          "description": "The personal site at lktec.org, served by Cloudflare Pages.",
+          "checks": [
+            {
+              "name": "Home page",
+              "url": "https://lktec.org",
+              "expect_body_contains": "Körber"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Demos",
+      "components": [
+        {
+          "id": "homelabhub-demo",
+          "name": "Homelab Hub demo",
+          "description": "Read-only demo of Homelab Hub with sample data.",
+          "checks": [
+            {
+              "name": "Web app",
+              "url": "https://homelabhub-demo.lktec.org",
+              "expect_body_contains": "HOMELAB//HUB"
+            }
+          ]
+        },
+        {
+          "id": "piwatch-demo",
+          "name": "PiWatch demo",
+          "description": "Demo of the PiWatch k3s monitoring dashboard.",
+          "checks": [
+            {
+              "name": "Web app",
+              "url": "https://piwatch-demo.lktec.org",
+              "expect_body_contains": "PiWatch"
+            }
+          ]
+        },
+        {
+          "id": "studylife-demo",
+          "name": "Studylife demo",
+          "description": "Demo of the Studylife web app, including its demo login API.",
+          "checks": [
+            {
+              "name": "Web app",
+              "url": "https://studylife-demo.lktec.org",
+              "expect_body_contains": "StudyLife"
+            },
+            {
+              "name": "Demo login API",
+              "url": "https://studylife-demo.lktec.org/api/auth/demo",
+              "expect_json": { "demo": true }
+            }
+          ]
+        },
+        {
+          "id": "mowdeck-demo",
+          "name": "MowDeck demo",
+          "description": "Demo of MowDeck, the self-hosted robot mower dashboard.",
+          "planned": true,
+          "checks": [
+            {
+              "name": "Web app",
+              "url": "https://mowdeck-demo.lktec.org",
+              "expect_header": { "X-MowDeck-Demo": "1" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

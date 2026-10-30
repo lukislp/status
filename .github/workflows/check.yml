@@ -1,0 +1,108 @@
+name: Check
+
+# Probes every component, folds the result into data/ and - when something visible changed, or
+# at most every `publish_interval_minutes` - commits data/ as a signed bot commit and redeploys
+# the page. Runs in between only carry their results forward through the Actions cache, so the
+# repository gets a few dozen small commits a day instead of one every five minutes.
+#
+# GitHub runs scheduled workflows late under load; gaps of 10-20 minutes are normal and only
+# mean fewer samples, never a false outage.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: status-check
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.repository == 'lukislp/status'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          # audit, not block: the probed hosts come from config.json, and a blocked probe would
+          # be published as an outage.
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Restore the unpublished state of earlier runs
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .state-cache
+          key: status-data-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: status-data-
+      - name: Probe components
+        id: check
+        run: python3 -m statuspage check --cache .state-cache
+      - name: Keep this run's state for the next run
+        run: |
+          rm -rf .state-cache
+          cp -r data .state-cache
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .state-cache
+          key: status-data-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Push as the deploy key
+        if: steps.check.outputs.publish == 'true'
+        uses: lukislp/ci-workflows/.github/actions/deploy-key-push@962d016c5e3ee498913a8492898dd5e238ccbfb1 # v1.7.9
+        with:
+          deploy-key: ${{ secrets.SEMANTIC_RELEASE_DEPLOY_KEY }}
+          required: "true"
+      - name: Commit data/ as a signed bot commit
+        if: steps.check.outputs.publish == 'true'
+        uses: lukislp/ci-workflows/.github/actions/signed-bot-commit@0d352a3fab2ba9099b957c4164be2411f13786e8 # v1.7.12
+        with:
+          signing-key: ${{ secrets.DEPLOY_SIGNING_KEY }}
+          committer-name: "lktec-status-bot"
+          committer-email: "155678024+lukislp@users.noreply.github.com"
+          commit-message: "chore(data): status update [skip ci]"
+          branch: main
+      - name: Read incidents and maintenance from issues
+        if: steps.check.outputs.publish == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -m statuspage fetch-issues --out .issues.json
+      - name: Build the site
+        if: steps.check.outputs.publish == 'true'
+        run: python3 -m statuspage build --issues .issues.json --out _site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: steps.check.outputs.publish == 'true'
+        with:
+          path: _site
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,10 @@
+# Issues in this repository feed the status page, so blank issues are off. Problems with one of
+# the monitored sites can be reported through the contact details on lktec.org.
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/lukislp/status/security/advisories/new
+    about: Please report vulnerabilities privately.
+  - name: Contact
+    url: https://lktec.org
+    about: For anything else, use the contact details on lktec.org.
