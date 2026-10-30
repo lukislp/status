@@ -1,0 +1,40 @@
+name: Planned maintenance
+description: Announce a maintenance window on status.lktec.org (only issues by the page owner are published).
+title: "What is being maintained"
+labels: ["maintenance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Only issues **and comments** by the page owner appear on the status page. The window shows as "Scheduled" before the start, "In progress" during it and "Completed" afterwards or once the issue is closed (close as "not planned" to cancel it).
+  - type: input
+    id: start
+    attributes:
+      label: Start
+      description: ISO 8601 with offset, e.g. `2026-11-02T20:00+01:00` (or `2026-11-02 19:00` for UTC).
+    validations:
+      required: true
+  - type: input
+    id: end
+    attributes:
+      label: End
+      description: Same format as the start.
+    validations:
+      required: true
+  - type: checkboxes
+    id: components
+    attributes:
+      label: Affected components
+      options:
+        - label: "Portfolio (lktec.org) (`portfolio`)"
+        - label: "Homelab Hub demo (`homelabhub-demo`)"
+        - label: "PiWatch demo (`piwatch-demo`)"
+        - label: "Studylife demo (`studylife-demo`)"
+        - label: "MowDeck demo (`mowdeck-demo`)"
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happens and what visitors will notice.
+    validations:
+      required: true

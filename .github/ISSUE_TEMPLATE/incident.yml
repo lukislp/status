@@ -1,0 +1,39 @@
+name: Incident
+description: Post an incident on status.lktec.org (only issues by the page owner are published).
+title: "Short description of the problem"
+labels: ["incident"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Only issues **and comments** by the page owner appear on the status page; everything else is ignored.
+        Each later comment by the owner becomes a status update. Start a comment with `identified:`, `monitoring:` or `resolved:` to set its status. Close the issue to resolve the incident (close as "not planned" to withdraw it).
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - minor
+        - major
+        - critical
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: components
+    attributes:
+      label: Affected components
+      description: Labels like `component:<id>` work as well.
+      options:
+        - label: "Portfolio (lktec.org) (`portfolio`)"
+        - label: "Homelab Hub demo (`homelabhub-demo`)"
+        - label: "PiWatch demo (`piwatch-demo`)"
+        - label: "Studylife demo (`studylife-demo`)"
+        - label: "MowDeck demo (`mowdeck-demo`)"
+  - type: textarea
+    id: message
+    attributes:
+      label: What is happening?
+      description: Shown as the first update ("Investigating"). Plain text with **bold**, `code` and [links](https://example.org).
+    validations:
+      required: true

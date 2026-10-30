@@ -1,0 +1,80 @@
+name: Pages
+
+# Rebuilds and deploys the page when main changes (config, templates, incident files) or when the
+# page owner opens, edits, labels, closes or comments on an issue. Issue events from anyone else
+# do not deploy: their issues and comments are ignored by the renderer anyway, and this keeps
+# outsiders from triggering deployments. Nothing from an issue is ever executed - the issue text
+# is read through the API as data and escaped when rendered. No untrusted code is checked out:
+# `issues` and `issue_comment` runs use the default branch.
+on:
+  push:
+    branches: [main]
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled, deleted]
+  issue_comment:
+    types: [created, edited, deleted]
+  workflow_dispatch:
+
+concurrency:
+  group: pages-build
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: >-
+      github.repository == 'lukislp/status' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' ||
+       (github.event.sender.login == 'lukislp' && !github.event.issue.pull_request))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+            results-receiver.actions.githubusercontent.com:443
+            pipelines.actions.githubusercontent.com:443
+            *.blob.core.windows.net:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Read incidents and maintenance from issues
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -m statuspage fetch-issues --out .issues.json
+      - name: Build the site
+        run: python3 -m statuspage build --issues .issues.json --out _site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

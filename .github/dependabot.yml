@@ -1,0 +1,14 @@
+# Daily Dependabot updates. The checker is stdlib-only Python, so GitHub Actions is the only
+# ecosystem here - which is exactly the set of pins that must not go stale.
+# dependabot-auto-merge.yml carries patch/minor updates through.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "fix(ci)"
+    reviewers:
+      - "lukislp"
+    open-pull-requests-limit: 2
