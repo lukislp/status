@@ -1,24 +1,24 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-10-31T13:18:02Z",
+   "checked_at": "2026-10-31T13:23:28Z",
    "checks": [
     {
-     "error": "timed out",
-     "http_status": null,
-     "latency_ms": null,
+     "error": null,
+     "http_status": 200,
+     "latency_ms": 661,
      "name": "Web app",
-     "ok": false,
+     "ok": true,
      "tls_days_left": 58
     }
    ],
-   "fail_streak": 1,
-   "first_fail_at": "2026-10-31T13:18:02Z",
-   "latency_ms": null,
-   "message": "Web app: timed out",
-   "ok_streak": 0,
+   "fail_streak": 0,
+   "first_fail_at": null,
+   "latency_ms": 661,
+   "message": "",
+   "ok_streak": 1,
    "open_incident": null,
-   "status": "degraded"
+   "status": "operational"
   },
   "mowdeck-demo": {
    "checked_at": null,
@@ -26,32 +26,32 @@
    "status": "planned"
   },
   "piwatch-demo": {
-   "checked_at": "2026-10-31T13:18:02Z",
-   "checks": [
-    {
-     "error": "timed out",
-     "http_status": null,
-     "latency_ms": null,
-     "name": "Web app",
-     "ok": false,
-     "tls_days_left": 58
-    }
-   ],
-   "fail_streak": 1,
-   "first_fail_at": "2026-10-31T13:18:02Z",
-   "latency_ms": null,
-   "message": "Web app: timed out",
-   "ok_streak": 0,
-   "open_incident": null,
-   "status": "degraded"
-  },
-  "portfolio": {
-   "checked_at": "2026-10-31T13:18:02Z",
+   "checked_at": "2026-10-31T13:23:28Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 308,
+     "latency_ms": 631,
+     "name": "Web app",
+     "ok": true,
+     "tls_days_left": 58
+    }
+   ],
+   "fail_streak": 0,
+   "first_fail_at": null,
+   "latency_ms": 631,
+   "message": "",
+   "ok_streak": 1,
+   "open_incident": null,
+   "status": "operational"
+  },
+  "portfolio": {
+   "checked_at": "2026-10-31T13:23:28Z",
+   "checks": [
+    {
+     "error": null,
+     "http_status": 200,
+     "latency_ms": 183,
      "name": "Home page",
      "ok": true,
      "tls_days_left": 44
@@ -59,41 +59,41 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 308,
+   "latency_ms": 183,
    "message": "",
-   "ok_streak": 128,
+   "ok_streak": 129,
    "open_incident": null,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-10-31T13:18:02Z",
+   "checked_at": "2026-10-31T13:23:28Z",
    "checks": [
     {
-     "error": "timed out",
-     "http_status": null,
-     "latency_ms": null,
+     "error": null,
+     "http_status": 200,
+     "latency_ms": 584,
      "name": "Web app",
-     "ok": false,
+     "ok": true,
      "tls_days_left": 58
     },
     {
-     "error": "timed out",
-     "http_status": null,
-     "latency_ms": null,
+     "error": null,
+     "http_status": 200,
+     "latency_ms": 574,
      "name": "Demo login API",
-     "ok": false,
+     "ok": true,
      "tls_days_left": 58
     }
    ],
-   "fail_streak": 1,
-   "first_fail_at": "2026-10-31T13:18:02Z",
-   "latency_ms": null,
-   "message": "Web app: timed out; Demo login API: timed out",
-   "ok_streak": 0,
+   "fail_streak": 0,
+   "first_fail_at": null,
+   "latency_ms": 584,
+   "message": "",
+   "ok_streak": 1,
    "open_incident": null,
-   "status": "degraded"
+   "status": "operational"
   }
  },
- "generated_at": "2026-10-31T13:18:02Z",
- "published_at": "2026-10-31T13:18:02Z"
+ "generated_at": "2026-10-31T13:23:28Z",
+ "published_at": "2026-10-31T13:23:28Z"
 }
