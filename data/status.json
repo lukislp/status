@@ -1,12 +1,12 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-10-31T05:57:11Z",
+   "checked_at": "2026-10-31T06:32:33Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 449,
+     "latency_ms": 455,
      "name": "Web app",
      "ok": true,
      "tls_days_left": 58
@@ -14,9 +14,9 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 449,
+   "latency_ms": 455,
    "message": "",
-   "ok_streak": 70,
+   "ok_streak": 73,
    "open_incident": null,
    "status": "operational"
   },
@@ -26,12 +26,12 @@
    "status": "planned"
   },
   "piwatch-demo": {
-   "checked_at": "2026-10-31T05:57:11Z",
+   "checked_at": "2026-10-31T06:32:33Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 514,
+     "latency_ms": 481,
      "name": "Web app",
      "ok": true,
      "tls_days_left": 58
@@ -39,19 +39,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 514,
+   "latency_ms": 481,
    "message": "",
-   "ok_streak": 70,
+   "ok_streak": 73,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio": {
-   "checked_at": "2026-10-31T05:57:11Z",
+   "checked_at": "2026-10-31T06:32:33Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 177,
+     "latency_ms": 168,
      "name": "Home page",
      "ok": true,
      "tls_days_left": 44
@@ -59,19 +59,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 177,
+   "latency_ms": 168,
    "message": "",
-   "ok_streak": 70,
+   "ok_streak": 73,
    "open_incident": null,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-10-31T05:57:11Z",
+   "checked_at": "2026-10-31T06:32:33Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 474,
+     "latency_ms": 592,
      "name": "Web app",
      "ok": true,
      "tls_days_left": 58
@@ -79,7 +79,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 473,
+     "latency_ms": 555,
      "name": "Demo login API",
      "ok": true,
      "tls_days_left": 58
@@ -87,13 +87,13 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 474,
+   "latency_ms": 592,
    "message": "",
-   "ok_streak": 70,
+   "ok_streak": 73,
    "open_incident": null,
    "status": "operational"
   }
  },
- "generated_at": "2026-10-31T05:57:11Z",
- "published_at": "2026-10-31T05:57:11Z"
+ "generated_at": "2026-10-31T06:32:33Z",
+ "published_at": "2026-10-31T06:32:33Z"
 }
