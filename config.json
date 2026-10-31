@@ -88,7 +88,6 @@
           "id": "mowdeck-demo",
           "name": "MowDeck demo",
           "description": "Demo of MowDeck, the self-hosted robot mower dashboard.",
-          "planned": true,
           "checks": [
             {
               "name": "Web app",
