@@ -38,8 +38,11 @@ CHECK_KEYS = {
     "expect_header",
     "expect_body_contains",
     "expect_json",
+    "maintenance_response",
 }
+MAINTENANCE_RESPONSE_KEYS = {"status", "body_contains", "header"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
+DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class ConfigError(ValueError):
@@ -89,7 +92,16 @@ def validate_config(raw: dict) -> dict:
     authors = issues.get("authors") or []
     if not isinstance(authors, list) or not all(isinstance(a, str) and a for a in authors):
         raise ConfigError("issues.authors must be a list of GitHub logins")
-    return {"site": site, "settings": settings, "groups": groups, "issues": {"repo": issues.get("repo", ""), "authors": authors}}
+    resets = raw.get("uptime_resets") or []
+    if not isinstance(resets, list) or not all(isinstance(d, str) and DAY_RE.match(d) for d in resets):
+        raise ConfigError("uptime_resets must be a list of YYYY-MM-DD days")
+    return {
+        "site": site,
+        "settings": settings,
+        "groups": groups,
+        "issues": {"repo": issues.get("repo", ""), "authors": authors},
+        "uptime_resets": resets,
+    }
 
 
 def _validate_component(comp: dict, seen: set[str]) -> None:
@@ -119,6 +131,22 @@ def _validate_component(comp: dict, seen: set[str]) -> None:
             status = [status]
         if not isinstance(status, list) or not all(isinstance(s, int) for s in status):
             raise ConfigError(f"component {cid}: expect_status must be an int or a list of ints")
+        _validate_maintenance_response(cid, check.get("maintenance_response"))
+
+
+def _validate_maintenance_response(cid: str, spec) -> None:
+    """A known, planned response (e.g. a demo reset page) that counts as up. It needs a status
+    and something specific to that page, so a bare 503 from anywhere never matches."""
+    if spec is None:
+        return
+    if not isinstance(spec, dict) or set(spec) - MAINTENANCE_RESPONSE_KEYS:
+        raise ConfigError(f"component {cid}: maintenance_response keys are {sorted(MAINTENANCE_RESPONSE_KEYS)}")
+    if not isinstance(spec.get("status"), int) or isinstance(spec.get("status"), bool):
+        raise ConfigError(f"component {cid}: maintenance_response.status must be an int")
+    if not spec.get("body_contains") and not spec.get("header"):
+        raise ConfigError(f"component {cid}: maintenance_response needs body_contains or header")
+    if "header" in spec and not isinstance(spec["header"], dict):
+        raise ConfigError(f"component {cid}: maintenance_response.header must be an object")
 
 
 def issue_labels(config: dict) -> list[tuple[str, str]]:
