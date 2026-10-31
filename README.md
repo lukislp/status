@@ -130,8 +130,21 @@ Add an entry to a group in `config.json`:
 
 Check options: `expect_status` (default `200`, or a list), `expect_header` (`{"Name": "value"}`),
 `expect_body_contains`, `expect_json` (top-level fields). Set `"planned": true` for a site that is
-not live yet - it shows as *Coming soon* and is not probed; remove the flag once it is live (the
-MowDeck demo is configured this way and already expects its `X-MowDeck-Demo: 1` header).
+not live yet - it shows as *Coming soon* and is not probed; remove the flag once it is live.
+
+`maintenance_response` (`{"status": 503, "header": {...}, "body_contains": "..."}`) declares a
+known, planned answer that counts as up. Every given part must match, and a header or body text
+is required, so any other 503, a 502 or a timeout is still an outage. The MowDeck demo uses it
+for its reset every six hours (Caddy answers 503, `Retry-After: 120`, "The MowDeck demo is being
+reset ...").
+
+## Correcting a day's uptime
+
+`"uptime_resets": ["YYYY-MM-DD"]` in `config.json` is a one-off correction: the next checker run
+marks every run of that day as up for all components and records the day in
+`history.json` → `resets_applied`, so it is applied exactly once - on the repository copy or the
+Actions cache copy, whichever is newer - and later runs of that day count normally again. It
+was used for 2026-10-31 (planned host maintenance of the demo server).
 
 Then add the component to the checkbox lists in `.github/ISSUE_TEMPLATE/incident.yml` and
 `maintenance.yml` (CI fails if they drift from the config) and run `scripts/setup-repo.sh` again

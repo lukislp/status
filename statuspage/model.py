@@ -89,6 +89,10 @@ def evaluate_check(check: dict, response: dict, settings: dict) -> dict:
         result["error"] = response["error"]
         return result
 
+    if is_maintenance_response(check.get("maintenance_response"), response):
+        result["ok"] = True
+        return result
+
     expected = check.get("expect_status", 200)
     expected = [expected] if isinstance(expected, int) else expected
     if response.get("status") not in expected:
@@ -135,6 +139,22 @@ def evaluate_check(check: dict, response: dict, settings: dict) -> dict:
     if days is not None and days < settings["tls_warn_days"]:
         result["tls_warning"] = True
     return result
+
+
+def is_maintenance_response(spec: dict | None, response: dict) -> bool:
+    """True when the response is the check's known planned-maintenance answer (for example the
+    MowDeck demo's 503 reset page). Every configured part must match; anything else, including
+    other 503s, is judged by the normal expectations."""
+    if not spec or response.get("status") != spec["status"]:
+        return False
+    headers = response.get("headers") or {}
+    for name, value in (spec.get("header") or {}).items():
+        if str(headers.get(name.lower(), "")).strip() != str(value):
+            return False
+    needle = spec.get("body_contains")
+    if needle and needle not in (response.get("body") or b"").decode("utf-8", errors="replace"):
+        return False
+    return True
 
 
 # --------------------------------------------------------------------------- component
@@ -192,6 +212,23 @@ def record_day(history: dict, component_id: str, day: str, checks: list[dict]) -
         entry["lat_max"] = max(entry["lat_max"], int(primary["latency_ms"]))
 
 
+def apply_uptime_resets(history: dict, days: list[str]) -> None:
+    """One-off corrections from `uptime_resets` in the config: mark every run of that day as up
+    for all components. Each day is applied once and remembered in `history["resets_applied"]`,
+    so runs after the correction count normally again, whichever copy (repository or Actions
+    cache) the checker continues from."""
+    applied = history.setdefault("resets_applied", [])
+    for day in days:
+        if day in applied:
+            continue
+        for entries in history["days"].values():
+            entry = entries.get(day)
+            if entry:
+                entry["up"] = float(entry["n"])
+                entry["fail"] = 0
+        applied.append(day)
+
+
 def day_uptime(entry: dict | None) -> float | None:
     if not entry or not entry.get("n"):
         return None
@@ -218,6 +255,8 @@ def trim(data: dict, now: datetime, retention_days: int, known_ids: set[str]) ->
         for day in list(days[cid]):
             if day < cutoff:
                 del days[cid][day]
+    if "resets_applied" in data["history"]:
+        data["history"]["resets_applied"] = [d for d in data["history"]["resets_applied"] if d >= cutoff]
     for cid in list(data["status"]["components"]):
         if cid not in known_ids:
             del data["status"]["components"][cid]
@@ -248,6 +287,7 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
     events = {"changed": [], "opened": [], "resolved": []}
     incidents = data["incidents"]["incidents"]
     by_id = {i["id"]: i for i in incidents}
+    apply_uptime_resets(data["history"], config.get("uptime_resets") or [])
 
     for group in config["groups"]:
         for comp in group["components"]:

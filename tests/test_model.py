@@ -91,6 +91,23 @@ class EvaluateCheckTest(unittest.TestCase):
                          "response is not valid JSON")
         self.assertFalse(model.evaluate_check(check, response(body=b"[1]"), SETTINGS)["ok"])
 
+    def test_known_maintenance_response_counts_as_up(self):
+        check = {"url": "u", "expect_header": {"X-MowDeck-Demo": "1"},
+                 "maintenance_response": {"status": 503, "header": {"Retry-After": "120"},
+                                          "body_contains": "The MowDeck demo is being reset"}}
+        reset = response(status=503, headers={"retry-after": "120"},
+                         body=b"The MowDeck demo is being reset and will be back in a few minutes.")
+        self.assertTrue(model.evaluate_check(check, reset, SETTINGS)["ok"])
+        # any other 503, a missing header, a 502 or a timeout stays an outage
+        other = [
+            response(status=503, headers={"retry-after": "120"}, body=b"Service Unavailable"),
+            response(status=503, body=b"The MowDeck demo is being reset"),
+            response(status=502, headers={"retry-after": "120"}, body=b"The MowDeck demo is being reset"),
+            response(status=None, error="timed out"),
+        ]
+        for resp in other:
+            self.assertFalse(model.evaluate_check(check, resp, SETTINGS)["ok"])
+
     def test_slow_and_tls_warnings_keep_ok(self):
         slow = model.evaluate_check({"url": "u"}, response(latency=9000), SETTINGS)
         self.assertTrue(slow["ok"] and slow["slow"])
@@ -188,6 +205,21 @@ class ApplyRunTest(unittest.TestCase):
         self.assertIn(later.strftime("%Y-%m-%d"), data["history"]["days"]["web"])
         self.assertEqual(data["incidents"]["incidents"], [])
 
+    def test_uptime_reset_clears_a_day_once(self):
+        data, _ = self.run_sequence([ok(), fail(), fail(), ok()])
+        cfg = dict(config(), uptime_resets=["2026-10-30"])
+        later = T0 + timedelta(hours=1)
+        data, _ = model.apply_run(data, cfg, {"web": [ok()], "app": [ok(), fail()]}, later)
+        web = data["history"]["days"]["web"]["2026-10-30"]
+        self.assertEqual((web["n"], web["fail"]), (5, 0))
+        self.assertAlmostEqual(model.day_uptime(web), 100.0)
+        # the run that applied the reset was recorded after it and counts normally
+        self.assertAlmostEqual(model.day_uptime(data["history"]["days"]["app"]["2026-10-30"]), 90.0)
+        self.assertEqual(data["history"]["resets_applied"], ["2026-10-30"])
+        # later failures on the same day are not wiped again
+        data, _ = model.apply_run(data, cfg, {"web": [fail()], "app": [ok(), ok()]}, later + timedelta(minutes=5))
+        self.assertEqual(data["history"]["days"]["web"]["2026-10-30"]["fail"], 1)
+
     def test_removed_component_history_is_dropped(self):
         data, _ = self.run_sequence([ok()])
         data["history"]["days"]["gone"] = {"2026-10-30": {"n": 1}}
@@ -226,6 +258,18 @@ class ConfigTest(unittest.TestCase):
             validate_config({"site": {"title": "t", "base_url": "https://x"},
                              "groups": [{"name": "g", "components": [
                                  {"id": "a", "name": "A", "checks": [{"url": "http://x"}]}]}]})
+
+    def test_maintenance_response_needs_something_specific(self):
+        check = {"url": "https://x", "maintenance_response": {"status": 503}}
+        with self.assertRaises(ConfigError):
+            validate_config({"site": {"title": "t", "base_url": "https://x"}, "groups": [
+                {"name": "g", "components": [{"id": "a", "name": "A", "checks": [check]}]}]})
+
+    def test_rejects_malformed_uptime_resets(self):
+        with self.assertRaises(ConfigError):
+            validate_config({"site": {"title": "t", "base_url": "https://x"}, "uptime_resets": ["31.10.2026"],
+                             "groups": [{"name": "g", "components": [
+                                 {"id": "a", "name": "A", "checks": [{"url": "https://x"}]}]}]})
 
     def test_repository_config_is_valid(self):
         from pathlib import Path

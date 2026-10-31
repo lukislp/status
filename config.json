@@ -22,6 +22,7 @@
     "repo": "lukislp/status",
     "authors": ["lukislp"]
   },
+  "uptime_resets": ["2026-10-31"],
   "groups": [
     {
       "name": "Website",
@@ -92,7 +93,12 @@
             {
               "name": "Web app",
               "url": "https://mowdeck-demo.lktec.org",
-              "expect_header": { "X-MowDeck-Demo": "1" }
+              "expect_header": { "X-MowDeck-Demo": "1" },
+              "maintenance_response": {
+                "status": 503,
+                "header": { "Retry-After": "120" },
+                "body_contains": "The MowDeck demo is being reset"
+              }
             }
           ]
         }
