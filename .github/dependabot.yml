@@ -18,3 +18,7 @@ updates:
       ci-workflows:
         patterns:
           - "lukislp/ci-workflows*"
+      # init, analyze and upload-sarif must run the same version - one PR for all.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
