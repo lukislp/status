@@ -59,13 +59,13 @@ jobs:
           key: status-data-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Push as the deploy key
         if: steps.check.outputs.publish == 'true'
-        uses: lukislp/ci-workflows/.github/actions/deploy-key-push@0476ea5ecc543deade233e4dd940ea87db9f5df8 # v1.8.23
+        uses: lukislp/ci-workflows/.github/actions/deploy-key-push@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
         with:
           deploy-key: ${{ secrets.SEMANTIC_RELEASE_DEPLOY_KEY }}
           required: "true"
       - name: Commit data/ as a signed bot commit
         if: steps.check.outputs.publish == 'true'
-        uses: lukislp/ci-workflows/.github/actions/signed-bot-commit@0476ea5ecc543deade233e4dd940ea87db9f5df8 # v1.8.23
+        uses: lukislp/ci-workflows/.github/actions/signed-bot-commit@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
         with:
           signing-key: ${{ secrets.DEPLOY_SIGNING_KEY }}
           committer-name: "lktec-status-bot"
