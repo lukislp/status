@@ -16,8 +16,9 @@ This repository builds a static status page. The interesting surfaces are:
   comments authored by the accounts in `config.json` → `issues.authors` are used; all issue
   text is escaped before rendering (no raw HTML, only `http(s)` and relative links). A way to
   get content from someone else onto the page, or to inject markup, is in scope.
-- **Workflows.** The scheduled check commits with a write deploy key and an SSH signing key
-  (repository secrets). Workflows triggered by issues never check out or run code from the
+- **Workflows.** The scheduled check commits `data/` through the lktec-bot GitHub App
+  (repository secrets `LKTEC_BOT_APP_ID` and `LKTEC_BOT_PRIVATE_KEY`; the token lives for one run,
+  is limited to this repository and `contents: write`, and the policy restricts it to `data/`). Workflows triggered by issues never check out or run code from the
   issue and only deploy for events sent by the page owner.
 - **The page itself.** A strict Content-Security-Policy (`default-src 'none'`), no third-party
   requests, no cookies.

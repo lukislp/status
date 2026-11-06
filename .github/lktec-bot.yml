@@ -13,3 +13,11 @@ modules:
     method: squash
     # Dependency names (exact, case-insensitive) that are never approved or armed.
     exclude: []
+
+  # Commits the generated status data onto main every few minutes (see docs/modules/sync.md in
+  # lukislp/lktec-bot). The App is a bypass actor of the branch ruleset for it.
+  sync:
+    enabled: true
+    paths: [data]
+    branch: main
+    commit-message: "chore(data): status update [skip ci]"
