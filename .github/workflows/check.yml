@@ -1,9 +1,10 @@
 name: Check
 
 # Probes every component, folds the result into data/ and - when something visible changed, or
-# at most every `publish_interval_minutes` - commits data/ as a signed bot commit and redeploys
-# the page. Runs in between only carry their results forward through the Actions cache, so the
-# repository gets a few dozen small commits a day instead of one every five minutes.
+# at most every `publish_interval_minutes` - commits data/ through the lktec-bot GitHub App
+# (module sync, docs/modules/sync.md in lukislp/lktec-bot; GitHub signs that commit) and
+# redeploys the page. Runs in between only carry their results forward through the Actions
+# cache, so the repository gets a few dozen small commits a day instead of one every five minutes.
 #
 # GitHub runs scheduled workflows late under load; gaps of 10-20 minutes are normal and only
 # mean fewer samples, never a false outage.
@@ -18,6 +19,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read # the reusable sync workflow reads which commit of itself the run uses
 
 jobs:
   check:
@@ -29,6 +31,7 @@ jobs:
       issues: read
     outputs:
       publish: ${{ steps.check.outputs.publish }}
+      base: ${{ steps.base.outputs.sha }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -57,21 +60,32 @@ jobs:
         with:
           path: .state-cache
           key: status-data-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Push as the deploy key
+      # The commit itself is made by the sync job below (lktec-bot App). This step only hands the
+      # changed files of data/ over as an artifact: manifest.txt plus files/<path>, the layout the
+      # sync workflow expects. Deletions are not handed over; data/ only ever grows.
+      - id: base
         if: steps.check.outputs.publish == 'true'
-        uses: lukislp/ci-workflows/.github/actions/deploy-key-push@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
+        name: Hand the changed data files over to the sync job
+        run: |
+          set -eu
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          handover="$RUNNER_TEMP/handover"
+          mkdir -p "$handover/files"
+          : > "$handover/manifest.txt"
+          while IFS= read -r -d '' path; do
+            mkdir -p "$handover/files/$(dirname "$path")"
+            cp "$path" "$handover/files/$path"
+            printf '%s\n' "$path" >> "$handover/manifest.txt"
+            echo "changed: $path"
+          done < <(git ls-files -z --modified --others --exclude-standard -- data)
+      - if: steps.check.outputs.publish == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          deploy-key: ${{ secrets.SEMANTIC_RELEASE_DEPLOY_KEY }}
-          required: "true"
-      - name: Commit data/ as a signed bot commit
-        if: steps.check.outputs.publish == 'true'
-        uses: lukislp/ci-workflows/.github/actions/signed-bot-commit@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
-        with:
-          signing-key: ${{ secrets.DEPLOY_SIGNING_KEY }}
-          committer-name: "lktec-status-bot"
-          committer-email: "155678024+lukislp@users.noreply.github.com"
-          commit-message: "chore(data): status update [skip ci]"
-          branch: main
+          name: status-handover
+          path: ${{ runner.temp }}/handover
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
       - name: Read incidents and maintenance from issues
         if: steps.check.outputs.publish == 'true'
         env:
@@ -84,6 +98,20 @@ jobs:
         if: steps.check.outputs.publish == 'true'
         with:
           path: _site
+
+  # Commits the handed-over data/ files onto main as lktec-bot[bot] (the App is a bypass actor of
+  # the branch ruleset for this; the policy in .github/lktec-bot.yml limits it to data/).
+  sync:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    uses: lukislp/lktec-bot/.github/workflows/sync.yml@38079b17498fcfda986f427fd6258bd32185e7c3 # v0.2.0
+    with:
+      artifact: status-handover
+      branch: main
+      base-sha: ${{ needs.check.outputs.base }}
+    secrets:
+      app-id: ${{ secrets.LKTEC_BOT_APP_ID }}
+      private-key: ${{ secrets.LKTEC_BOT_PRIVATE_KEY }}
 
   deploy:
     needs: check

@@ -66,9 +66,11 @@ more than 90 days ago are dropped, so the data stays at a few dozen kilobytes.
 **Publishing.** The `Check` workflow runs every five minutes (GitHub delays scheduled runs under
 load; gaps only mean fewer samples). It commits `data/` and redeploys the page when a status
 changes or an incident opens/resolves, otherwise at most every `publish_interval_minutes` (30).
-Runs in between carry their state forward in the Actions cache. Bot commits are SSH-signed
-("Verified") and pushed with a write deploy key, using the shared
-[`deploy-key-push` and `signed-bot-commit`](https://github.com/lukislp/ci-workflows) actions.
+Runs in between carry their state forward in the Actions cache. The commit is made by the
+[lktec-bot](https://github.com/lukislp/lktec-bot) GitHub App through `createCommitOnBranch`
+(module `sync`): the `check` job hands the changed files of `data/` over as an artifact, the
+`sync` job commits them, and GitHub itself signs the commit ("Verified"). The App is a bypass
+actor of the `main` ruleset and the policy in `.github/lktec-bot.yml` limits it to `data/`.
 The `Pages` workflow rebuilds the page on pushes to `main` and on the owner's issue activity.
 
 ## Posting an incident
@@ -164,23 +166,22 @@ python -m http.server 8790 --bind 127.0.0.1 --directory _site
 
 ## First-time setup
 
-The repository needs two secrets, issue labels, GitHub Pages, a ruleset and a DNS record.
+The repository needs the two lktec-bot App secrets, issue labels, GitHub Pages, a ruleset and a DNS record.
 `scripts/setup-repo.sh` does all of it except creating a Cloudflare record without an API token
 (then it prints the record). It is idempotent and has `--dry-run`.
 
 ```bash
-gh auth refresh -h github.com -s admin:ssh_signing_key   # once, if the script asks for it
 scripts/setup-repo.sh --dry-run                           # show what would happen
 scripts/setup-repo.sh                                     # do it
 ```
 
 | Step | What |
 | --- | --- |
-| `DEPLOY_SIGNING_KEY` | fresh ed25519 key, registered as an account **signing** key, private part stored as the secret - bot commits show "Verified" |
-| `SEMANTIC_RELEASE_DEPLOY_KEY` | fresh ed25519 **write deploy key**, private part stored as the secret - lets the bot push `data/` past the ruleset |
+| `LKTEC_BOT_APP_ID` | secret, ID of the lktec-bot GitHub App (installed on the repository) - the script only checks that it exists |
+| `LKTEC_BOT_PRIVATE_KEY` | secret, private key of the App - the script only checks that it exists; with these two the App commits `data/` and GitHub signs the commit |
 | labels | `incident`, `maintenance`, `impact:*`, `component:*` |
 | Pages | source "GitHub Actions", custom domain `status.lktec.org`, HTTPS enforced (only possible once DNS works - run the script again later) |
-| ruleset | copy of `lukislp/demosites`' "main protection": PRs, required checks `test` + `lint`, signed commits, no force pushes/deletion; bypass: deploy keys (always), admins (pull requests) |
+| ruleset | copy of `lukislp/demosites`' "main protection": PRs, required checks `test` + `lint`, signed commits, no force pushes/deletion; bypass: the lktec-bot App (always), admins (pull requests) |
 | DNS | with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID` set: CNAME `status` → `lukislp.github.io`, **DNS only** (GitHub needs to issue the certificate); otherwise it prints the record |
 | `AUTOMERGE_TOKEN` | optional prompt for the PAT used by Dependabot auto-merge (`--no-automerge` skips) |
 

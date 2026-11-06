@@ -2,14 +2,14 @@
 # One-time setup of the lukislp/status repository: everything that can be done without the
 # GitHub or Cloudflare web UI. Idempotent - safe to run again; finished steps are skipped.
 #
-#   scripts/setup-repo.sh [--dry-run] [--no-automerge] [--rotate-keys] [--repo owner/name]
+#   scripts/setup-repo.sh [--dry-run] [--no-automerge] [--repo owner/name]
 #
-# Runs in Git Bash on Windows and on Linux. Needs: gh (logged in), ssh-keygen, python3/python,
+# Runs in Git Bash on Windows and on Linux. Needs: gh (logged in), python3/python,
 # curl (only for the optional Cloudflare step). Optional env: CLOUDFLARE_API_TOKEN and
 # CLOUDFLARE_ZONE_ID (token with Zone.DNS edit on lktec.org) to create the DNS record.
+# The lktec-bot App secrets (LKTEC_BOT_APP_ID, LKTEC_BOT_PRIVATE_KEY) are only checked.
 #
-# Private key material is written only to a temporary directory, handed to `gh secret set` on
-# stdin and deleted on exit. Nothing secret is printed.
+# Secret values are handed to `gh secret set` on stdin and never printed.
 set -euo pipefail
 
 REPO="lukislp/status"
@@ -20,7 +20,6 @@ RULESET_NAME="main protection"
 REQUIRED_CHECKS=("test" "lint")
 DRY_RUN=0
 AUTOMERGE=1
-ROTATE=0
 
 usage() {
   sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
@@ -30,7 +29,6 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --no-automerge) AUTOMERGE=0 ;;
-    --rotate-keys) ROTATE=1 ;;
     --repo) REPO="$2"; shift ;;
     -h | --help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -70,9 +68,7 @@ trap cleanup EXIT INT TERM
 # --------------------------------------------------------------------------- prerequisites
 
 say "Checking prerequisites"
-for tool in gh ssh-keygen; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "missing: $tool" >&2; exit 1; }
-done
+command -v gh >/dev/null 2>&1 || { echo "missing: gh" >&2; exit 1; }
 PY=""
 for candidate in python3 python; do
   if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
@@ -90,10 +86,6 @@ SCOPES="$(gh auth status 2>&1 | grep -i 'token scopes' || true)"
 MISSING=()
 # gh prints e.g.: Token scopes: 'gist', 'read:org', 'repo'
 [[ "$SCOPES" == *"'repo'"* ]] || MISSING+=("repo")
-# write:ssh_signing_key is enough for adding a signing key; admin: includes it.
-if [[ "$SCOPES" != *"'admin:ssh_signing_key'"* && "$SCOPES" != *"'write:ssh_signing_key'"* ]]; then
-  MISSING+=("admin:ssh_signing_key")
-fi
 if [ "${#MISSING[@]}" -gt 0 ]; then
   echo "gh token is missing scopes: ${MISSING[*]}" >&2
   echo "run:  gh auth refresh -h github.com -s $(IFS=,; echo "${MISSING[*]}")" >&2
@@ -102,49 +94,24 @@ fi
 gh repo view "$REPO" >/dev/null 2>&1 || { echo "repository $REPO not found or not accessible" >&2; exit 1; }
 SECRETS="$(gh secret list --repo "$REPO" 2>/dev/null | cut -f1 || true)"
 has_secret() { printf '%s\n' "$SECRETS" | grep -qx "$1"; }
-echo "    ok: gh, ssh-keygen, $PY; repository $REPO"
+echo "    ok: gh, $PY; repository $REPO"
 [ "$DRY_RUN" = 1 ] && echo "    dry run: nothing will be changed"
 
-# --------------------------------------------------------------------------- 1. signing key
+# --------------------------------------------------------------------------- 1. App secrets
 
-say "1/7 Bot commit signing key (secret DEPLOY_SIGNING_KEY)"
-if has_secret DEPLOY_SIGNING_KEY && [ "$ROTATE" = 0 ]; then
-  echo "    secret exists - skipped (use --rotate-keys to replace it)"
-else
-  title="status bot signing $(date +%Y-%m-%d)"
-  ssh-keygen -q -t ed25519 -N "" -C "$title" -f "$TMP/signing"
-  # Registered as an account *signing* key so the bot commits show "Verified".
-  run gh ssh-key add "$TMP/signing.pub" --type signing --title "$title"
-  if [ "$DRY_RUN" = 1 ]; then
-    echo "    [dry-run] gh secret set DEPLOY_SIGNING_KEY --repo $REPO < (private key)"
+say "1/6 lktec-bot App secrets (LKTEC_BOT_APP_ID, LKTEC_BOT_PRIVATE_KEY)"
+for name in LKTEC_BOT_APP_ID LKTEC_BOT_PRIVATE_KEY; do
+  if has_secret "$name"; then
+    echo "    secret $name exists"
   else
-    gh secret set DEPLOY_SIGNING_KEY --repo "$REPO" < "$TMP/signing"
+    warn "secret $name is missing"
+    note_left "install the lktec-bot App on $REPO and store $name: gh secret set $name --repo $REPO"
   fi
-  note_done "signing key registered and stored as DEPLOY_SIGNING_KEY"
-  [ "$ROTATE" = 1 ] && note_left "remove the previous 'status bot signing' key at https://github.com/settings/keys"
-fi
+done
 
-# --------------------------------------------------------------------------- 2. deploy key
+# --------------------------------------------------------------------------- 2. labels
 
-say "2/7 Write deploy key for bot pushes (secret SEMANTIC_RELEASE_DEPLOY_KEY)"
-if has_secret SEMANTIC_RELEASE_DEPLOY_KEY && [ "$ROTATE" = 0 ]; then
-  echo "    secret exists - skipped (use --rotate-keys to replace it)"
-else
-  title="status bot push $(date +%Y-%m-%d)"
-  ssh-keygen -q -t ed25519 -N "" -C "$title" -f "$TMP/deploy"
-  run gh repo deploy-key add "$TMP/deploy.pub" --repo "$REPO" --allow-write --title "$title"
-  if [ "$DRY_RUN" = 1 ]; then
-    echo "    [dry-run] gh secret set SEMANTIC_RELEASE_DEPLOY_KEY --repo $REPO < (private key)"
-  else
-    gh secret set SEMANTIC_RELEASE_DEPLOY_KEY --repo "$REPO" < "$TMP/deploy"
-  fi
-  note_done "write deploy key added and stored as SEMANTIC_RELEASE_DEPLOY_KEY"
-  [ "$ROTATE" = 1 ] && note_left "delete the old 'status bot push' deploy key: gh repo deploy-key list --repo $REPO"
-fi
-
-# --------------------------------------------------------------------------- 3. labels
-
-say "3/7 Issue labels"
+say "2/6 Issue labels"
 while IFS=$'\t' read -r name description; do
   [ -n "$name" ] || continue
   case "$name" in
@@ -157,9 +124,9 @@ while IFS=$'\t' read -r name description; do
 done < <("$PY" -m statuspage labels | tr -d '\r')
 note_done "labels created/updated"
 
-# --------------------------------------------------------------------------- 4. pages
+# --------------------------------------------------------------------------- 3. pages
 
-say "4/7 GitHub Pages (build from Actions, custom domain $DOMAIN)"
+say "3/6 GitHub Pages (build from Actions, custom domain $DOMAIN)"
 if gh api "repos/$REPO/pages" >/dev/null 2>&1; then
   run gh api -X PUT "repos/$REPO/pages" -f build_type=workflow --silent
 else
@@ -176,9 +143,9 @@ else
   note_done "Pages enabled (workflow) with custom domain $DOMAIN"
 fi
 
-# --------------------------------------------------------------------------- 5. ruleset
+# --------------------------------------------------------------------------- 4. ruleset
 
-say "5/7 Ruleset for main (copied from $RULESET_SOURCE)"
+say "4/6 Ruleset for main (copied from $RULESET_SOURCE)"
 if gh api "repos/$REPO/rulesets" --jq '.[].name' 2>/dev/null | tr -d '\r' | grep -qx "$RULESET_NAME"; then
   echo "    ruleset '$RULESET_NAME' exists - skipped"
 else
@@ -198,8 +165,8 @@ for rule in src["rules"]:
     rules.append(rule)
 if not any(r["type"] == "required_signatures" for r in rules):
     rules.append({"type": "required_signatures"})
-# The bot pushes data/ to main with the write deploy key; admins merge through pull requests.
-bypass = [{"actor_id": None, "actor_type": "DeployKey", "bypass_mode": "always"},
+# The lktec-bot App commits data/ to main (createCommitOnBranch); admins merge through pull requests.
+bypass = [{"actor_id": 5630232, "actor_type": "Integration", "bypass_mode": "always"},
           {"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}]
 for actor in src.get("bypass_actors") or []:
     if actor not in bypass:
@@ -211,13 +178,13 @@ print("    rules:", ", ".join(r["type"] for r in rules))
 print("    required checks:", ", ".join(checks))
 PYEOF
   run gh api -X POST "repos/$REPO/rulesets" --input "$TMP/ruleset.json" --silent
-  note_done "ruleset '$RULESET_NAME' created (checks: ${REQUIRED_CHECKS[*]}; signed commits; deploy key bypass)"
+  note_done "ruleset '$RULESET_NAME' created (checks: ${REQUIRED_CHECKS[*]}; signed commits; lktec-bot App bypass)"
   note_left "review the ruleset once: https://github.com/$REPO/settings/rules"
 fi
 
-# --------------------------------------------------------------------------- 6. DNS
+# --------------------------------------------------------------------------- 5. DNS
 
-say "6/7 DNS: CNAME status -> $PAGES_TARGET (DNS only, not proxied)"
+say "5/6 DNS: CNAME status -> $PAGES_TARGET (DNS only, not proxied)"
 if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ZONE_ID:-}" ]; then
   command -v curl >/dev/null 2>&1 || { echo "missing: curl" >&2; exit 1; }
   api="https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records"
@@ -238,9 +205,9 @@ else
   note_left "create the DNS record: CNAME status -> $PAGES_TARGET, DNS only"
 fi
 
-# --------------------------------------------------------------------------- 7. automerge
+# --------------------------------------------------------------------------- 6. automerge
 
-say "7/7 AUTOMERGE_TOKEN for Dependabot auto-merge"
+say "6/6 AUTOMERGE_TOKEN for Dependabot auto-merge"
 if [ "$AUTOMERGE" = 0 ]; then
   echo "    skipped (--no-automerge)"
   note_left "Dependabot PRs will not auto-merge until AUTOMERGE_TOKEN is set"
