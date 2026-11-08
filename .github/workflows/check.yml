@@ -104,7 +104,7 @@ jobs:
   sync:
     needs: check
     if: needs.check.outputs.publish == 'true'
-    uses: lukislp/lktec-bot/.github/workflows/sync.yml@96409228fae388950b700878bfc36af519292d64 # v0.7.1
+    uses: lukislp/lktec-bot/.github/workflows/sync.yml@d2e0693df66fa10167181e6c3844cdc2032f4399 # v0.7.2
     with:
       artifact: status-handover
       branch: main
