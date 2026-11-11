@@ -50,7 +50,8 @@ class TestServer:
         self.directory = tempfile.TemporaryDirectory()
         self.cert, key = make_certificate(Path(self.directory.name))
         self.httpd = QuietServer(("127.0.0.1", 0), Handler)
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(self.cert, key)
         # The handshake happens in the handler thread on the first read, not in accept().
         self.httpd.socket = context.wrap_socket(self.httpd.socket, server_side=True, do_handshake_on_connect=False)
