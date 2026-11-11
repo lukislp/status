@@ -11,6 +11,7 @@ import copy
 import json
 from datetime import datetime, timedelta, timezone
 
+from . import diagnosis
 from .config import all_components
 
 # Component statuses, least to most severe. "maintenance" ranks below "degraded" so that a real
@@ -74,7 +75,28 @@ def evaluate_check(check: dict, response: dict, settings: dict) -> dict:
 
     `response` keys: status (int or None when no response arrived), headers (lower-cased
     names), body (bytes), latency_ms, error (transport error text or None), tls_days_left.
+    The probe adds stage, exception, answered and timings (where it failed and how long each
+    step took) and, after a retry, `previous` (the first attempt's response); all optional.
+
+    The result carries `diag` (the final attempt's diagnostic record, see diagnosis.py) and
+    `attempts` (every attempt's record, oldest first).
     """
+    result, failure = _judge(check, response, settings)
+    result["diag"] = _diagnose(failure, response, result["slow"])
+    earlier = response.get("previous")
+    earlier_diags = evaluate_check(check, earlier, settings)["attempts"] if earlier else []
+    result["attempts"] = [*earlier_diags, result["diag"]]
+    return result
+
+
+def _diagnose(failure: str | None, response: dict, slow: bool) -> dict:
+    phase = diagnosis.classify_phase(failure, response.get("stage"), response.get("exception"), slow)
+    answered = response.get("answered", response.get("status") is not None)
+    return diagnosis.diagnose(phase, response.get("timings"), response.get("headers"), answered)
+
+
+def _judge(check: dict, response: dict, settings: dict) -> tuple[dict, str | None]:
+    """The verdict on one response and, for a failed check, why it failed (diagnosis.FAIL_*)."""
     result = {
         "name": check.get("name") or check["url"],
         "ok": False,
@@ -87,34 +109,34 @@ def evaluate_check(check: dict, response: dict, settings: dict) -> dict:
     }
     if response.get("error"):
         result["error"] = response["error"]
-        return result
+        return result, diagnosis.FAIL_TRANSPORT
 
     if is_maintenance_response(check.get("maintenance_response"), response):
         result["ok"] = True
-        return result
+        return result, None
 
     expected = check.get("expect_status", 200)
     expected = [expected] if isinstance(expected, int) else expected
     if response.get("status") not in expected:
         result["error"] = f"HTTP {response.get('status')}"
-        return result
+        return result, diagnosis.FAIL_STATUS
 
     headers = response.get("headers") or {}
     for name, value in (check.get("expect_header") or {}).items():
         actual = headers.get(name.lower())
         if actual is None:
             result["error"] = f"missing header {name}"
-            return result
+            return result, diagnosis.FAIL_BODY
         if str(actual).strip() != str(value):
             result["error"] = f"header {name} is {actual!r}, expected {value!r}"
-            return result
+            return result, diagnosis.FAIL_BODY
 
     body = response.get("body") or b""
     text = body.decode("utf-8", errors="replace")
     needle = check.get("expect_body_contains")
     if needle and needle not in text:
         result["error"] = "expected content missing from the response"
-        return result
+        return result, diagnosis.FAIL_BODY
 
     expected_json = check.get("expect_json")
     if expected_json:
@@ -122,14 +144,14 @@ def evaluate_check(check: dict, response: dict, settings: dict) -> dict:
             doc = json.loads(text)
         except ValueError:
             result["error"] = "response is not valid JSON"
-            return result
+            return result, diagnosis.FAIL_BODY
         if not isinstance(doc, dict):
             result["error"] = "JSON response is not an object"
-            return result
+            return result, diagnosis.FAIL_BODY
         for key, value in expected_json.items():
             if doc.get(key) != value:
                 result["error"] = f"JSON field {key!r} is {doc.get(key)!r}, expected {value!r}"
-                return result
+                return result, diagnosis.FAIL_BODY
 
     result["ok"] = True
     latency = response.get("latency_ms")
@@ -138,7 +160,7 @@ def evaluate_check(check: dict, response: dict, settings: dict) -> dict:
     days = response.get("tls_days_left")
     if days is not None and days < settings["tls_warn_days"]:
         result["tls_warning"] = True
-    return result
+    return result, None
 
 
 def is_maintenance_response(spec: dict | None, response: dict) -> bool:
@@ -174,16 +196,34 @@ def classify_component(checks: list[dict], fail_streak: int, threshold: int) -> 
     return "operational"
 
 
+def check_problem(c: dict) -> str | None:
+    """One line about what is wrong with a check (None when nothing is)."""
+    if not c["ok"]:
+        return f"{c['name']}: {c['error']}"
+    if c["slow"]:
+        return f"{c['name']}: slow response ({c['latency_ms']} ms)"
+    if c["tls_warning"]:
+        return f"{c['name']}: TLS certificate expires in {c['tls_days_left']} days"
+    return None
+
+
 def component_message(checks: list[dict]) -> str:
-    problems = []
-    for c in checks:
-        if not c["ok"]:
-            problems.append(f"{c['name']}: {c['error']}")
-        elif c["slow"]:
-            problems.append(f"{c['name']}: slow response ({c['latency_ms']} ms)")
-        elif c["tls_warning"]:
-            problems.append(f"{c['name']}: TLS certificate expires in {c['tls_days_left']} days")
-    return "; ".join(problems)
+    return "; ".join(p for p in map(check_problem, checks) if p)
+
+
+def check_phase(c: dict) -> str | None:
+    return (c.get("diag") or {}).get("phase")
+
+
+def where_failed(checks: list[dict]) -> str:
+    """Public sentence for an incident: at which step each failed check broke. Only the phase
+    wording from diagnosis.PHASE_TEXT, never a request id, address or timing."""
+    parts = [
+        f"{c['name']}: {diagnosis.PHASE_TEXT[check_phase(c)]}"
+        for c in checks
+        if not c["ok"] and check_phase(c) in diagnosis.PHASE_TEXT
+    ]
+    return f"Where it failed - {'; '.join(parts)}." if parts else ""
 
 
 # --------------------------------------------------------------------------- data files
@@ -313,7 +353,7 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
                 open_id = None
 
             if failed_run and fail_streak >= threshold and not open_id:
-                incident = _open_auto_incident(comp, status, message, first_fail_at, stamp)
+                incident = _open_auto_incident(comp, status, message, where_failed(checks), first_fail_at, stamp)
                 incidents.append(incident)
                 by_id[incident["id"]] = incident
                 open_id = incident["id"]
@@ -337,7 +377,10 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
                 "first_fail_at": first_fail_at,
                 "open_incident": open_id,
                 "checks": [
-                    {k: c[k] for k in ("name", "ok", "latency_ms", "http_status", "tls_days_left", "error")}
+                    {
+                        **{k: c[k] for k in ("name", "ok", "latency_ms", "http_status", "tls_days_left", "error")},
+                        "phase": check_phase(c),
+                    }
                     for c in checks
                 ],
             }
@@ -348,7 +391,8 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
     return data, events
 
 
-def _open_auto_incident(comp: dict, status: str, message: str, started: str, stamp: str) -> dict:
+def _open_auto_incident(comp: dict, status: str, message: str, where: str, started: str, stamp: str) -> dict:
+    detail = f"{message}. {where}" if message and where else message or where
     compact = started.replace("-", "").replace(":", "").replace("T", "-")[:13]
     verb = "is unavailable" if status == "major" else "is partially unavailable"
     return {
@@ -363,7 +407,7 @@ def _open_auto_incident(comp: dict, status: str, message: str, started: str, sta
             {
                 "status": "investigating",
                 "at": stamp,
-                "body": f"Automated checks for {comp['name']} are failing. {message}".strip(),
+                "body": f"Automated checks for {comp['name']} are failing. {detail}".strip(),
             }
         ],
     }
