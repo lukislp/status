@@ -28,8 +28,10 @@ too, without links in the UI.
 ```
 config.json           sites, groups and checks
 statuspage/
-  probe.py            the only network code: GET per check, TLS expiry per host
+  probe.py            the only network code: GET per check (with timings), TLS expiry per host
+  diagnosis.py        pure: where a failed or slow check failed (phase), Cloudflare ids
   model.py            check evaluation, status rules, daily rollups, automatic incidents
+  report.py           the workflow log lines (phase, timings, cf-ray)
   issues.py           GitHub Issues -> incidents / maintenance
   manual.py           incidents/*.md and maintenance/*.md (file fallback)
   render.py           static HTML, status.json, feed.xml
@@ -42,6 +44,50 @@ scripts/setup-repo.sh one-time repository setup
 **Checks.** Every check is a GET (some demos answer HEAD with 405) that can expect a status
 code, a header, a piece of body text or a JSON field. A failed probe is retried once after a
 few seconds. Latency and the TLS certificate's remaining days are recorded.
+
+**What a check records.** Besides the verdict, every probe keeps *where* a failed or slow check
+failed (the **phase**) and cheap timings, so that a failure can be attributed from the check run
+alone:
+
+| Phase | Meaning |
+| --- | --- |
+| `dns` | the name did not resolve |
+| `connect` | TCP connection refused, unreachable or timed out |
+| `tls` | handshake or certificate failed (a timeout during the handshake counts here) |
+| `timeout_response` | connected, but no response headers within `timeout_seconds` |
+| `response_error` | connected, but the connection broke (or the body could not be read) |
+| `http_status` | the server answered with an unexpected status |
+| `body` | the answer lacked the expected header, text or JSON field |
+| `slow` | the answer was fine but slower than `slow_ms` |
+
+Timings: TCP connect, TLS handshake, time to the first response byte and the total, in ms. From
+the response, `cf-ray` and `cf-cache-status` (Cloudflare's request id and cache result) are kept;
+no other header, no body and no address is recorded. The phase is decided in one pure function
+(`diagnosis.classify_phase`) from how far the request got and the exception that stopped it, so it
+is testable without a network. Limits: with the standard library a check cannot tell a refused
+connection from a firewall that drops packets (both end as `connect`, the latter after the full
+timeout), nor a slow origin from a slow Cloudflare edge; the ray id is what tells Cloudflare which
+request to look up.
+
+**Reading a failed check in the workflow log.** The `Probe components` step prints one line per
+component. A problem is followed by its phase, timings and ids; a successful check shows its ray id:
+
+```
+piwatch-demo         degraded     Web app: timed out (phase: timeout_response, connect 43 ms, tls 61 ms, total 15062 ms; no response, so no cf-ray)
+studylife-demo       degraded     Web app: HTTP 502 (attempt 1: phase: timeout_response, connect 40 ms, tls 60 ms, total 15000 ms; no response, so no cf-ray; attempt 2: phase: http_status, connect 41 ms, tls 59 ms, first byte 12 ms, total 118 ms; cf-ray 9a1b2c3d4e5f6a7b-FRA)
+mowdeck-demo         operational  618 ms (cf-ray 9a1b2c3d4e5f6a7b-FRA, cf-cache-status DYNAMIC)
+```
+
+A failed probe is retried once, and then both attempts are shown because they can differ. A
+`timeout_response` without a ray id means the request never got an answer from Cloudflare's side
+either; if a retry shows a ray id (or the site was reachable meanwhile), the ray id of the failing
+request is what to hand to Cloudflare support.
+
+**What is published.** The log is the only place for timings and `cf-ray` ids. `data/status.json`
+(committed to this repository) holds the phase of every check, and the text of an automatic incident
+adds one sentence, for example *"Where it failed - Web app: connected, but no response arrived in
+time."* The published `status.json`, the pages and `data/history.json` carry no phase, timing or
+id; the history format is unchanged. Data files written before the phase existed still load.
 
 **Status rules.**
 

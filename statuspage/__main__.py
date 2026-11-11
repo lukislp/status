@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import model
+from . import model, report
 from .config import ConfigError, all_components, issue_labels, load_config
 from .issues import fetch_issues, items_from_issues
 from .manual import IncidentError, load_manual
@@ -75,8 +75,7 @@ def cmd_check(args) -> int:
 
     for comp in all_components(config):
         state = data["status"]["components"].get(comp["id"], {})
-        detail = state.get("message") or (f"{state.get('latency_ms')} ms" if state.get("latency_ms") is not None else "")
-        print(f"{comp['id']:<20} {state.get('status', '-'):<12} {detail}")
+        print(report.component_line(comp["id"], state, results.get(comp["id"])))
     for key in ("changed", "opened", "resolved"):
         if events[key]:
             print(f"{key}: {', '.join(events[key])}")
