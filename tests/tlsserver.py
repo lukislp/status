@@ -71,6 +71,8 @@ class TestServer:
     def trusting_context(self) -> ssl.SSLContext:
         context = ssl.create_default_context(cafile=str(self.cert))
         context.minimum_version = ssl.TLSVersion.TLSv1_2
+        # Python 3.13 is strict about certificate extensions; the test certificate is minimal.
+        context.verify_flags &= ~ssl.VERIFY_X509_STRICT
         return context
 
     def __enter__(self):
