@@ -27,6 +27,7 @@ from .model import (
 )
 
 BAR_DAYS = 90
+SUMMARY_DAYS = 30  # window of `uptime_30d` in status.json
 UPDATE_LABELS = {
     "investigating": "Investigating",
     "identified": "Identified",
@@ -174,6 +175,10 @@ class Context:
 
     def uptime(self, cid: str) -> float | None:
         return range_uptime(self.data["history"]["days"].get(cid, {}), self.days)
+
+    def recent_uptime(self, cid: str) -> float | None:
+        """Uptime over the last SUMMARY_DAYS days (the tail of the bar days)."""
+        return range_uptime(self.data["history"]["days"].get(cid, {}), self.days[-SUMMARY_DAYS:])
 
 
 # --------------------------------------------------------------------------- page chrome
@@ -488,13 +493,16 @@ def render_status_json(ctx: Context) -> str:
     for group in ctx.config["groups"]:
         for comp in group["components"]:
             state = ctx.state(comp["id"]) or {}
-            uptime = None if comp.get("planned") else ctx.uptime(comp["id"])
+            planned = comp.get("planned")
+            uptime = None if planned else ctx.uptime(comp["id"])
+            recent = None if planned else ctx.recent_uptime(comp["id"])
             components.append(
                 {
                     "id": comp["id"],
                     "name": comp["name"],
                     "group": group["name"],
                     "status": ctx.status_of(comp),
+                    "uptime_30d": round(recent, 3) if recent is not None else None,
                     "uptime_90d": round(uptime, 3) if uptime is not None else None,
                     "latency_ms": state.get("latency_ms"),
                     "checked_at": state.get("checked_at"),

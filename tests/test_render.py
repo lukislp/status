@@ -92,6 +92,15 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(index.count('class="bar '), 90 * 3)
         self.assertEqual(index.count('tabindex="0" aria-label='), 3)  # one tab stop per component
 
+    def test_uptime_30d_only_counts_the_last_thirty_days(self):
+        data = sample_data()
+        old = (self.now - timedelta(days=45)).strftime("%Y-%m-%d")
+        data["history"]["days"]["web"][old] = {"n": 100, "up": 0.0, "fail": 100}
+        doc = json.loads((build(data, [], self.now) / "status.json").read_text(encoding="utf-8"))
+        web = {c["id"]: c for c in doc["components"]}["web"]
+        self.assertAlmostEqual(web["uptime_30d"], 60.0)  # the failed day 45 days ago is outside
+        self.assertLess(web["uptime_90d"], 60.0)  # but inside the 90-day window
+
     def test_status_reflects_manual_incident_and_planned(self):
         doc = json.loads((self.out / "status.json").read_text(encoding="utf-8"))
         by_id = {c["id"]: c for c in doc["components"]}
@@ -99,6 +108,8 @@ class RenderTest(unittest.TestCase):
         self.assertIsNone(by_id["soon"]["uptime_90d"])
         self.assertEqual(by_id["web"]["status"], "operational")
         self.assertAlmostEqual(by_id["web"]["uptime_90d"], 60.0)
+        self.assertAlmostEqual(by_id["web"]["uptime_30d"], 60.0)
+        self.assertIsNone(by_id["soon"]["uptime_30d"])
         self.assertEqual(doc["status"]["indicator"], "operational")  # login incident is resolved
         self.assertEqual(doc["incidents"], [])
         self.assertEqual([(m["id"], m["state"]) for m in doc["maintenance"]], [("db-upgrade", "scheduled")])
