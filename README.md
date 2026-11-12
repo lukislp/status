@@ -20,7 +20,8 @@ library Python. The page loads nothing from third parties, sets no cookies and h
   uptime percentage
 - an **Incident history** page and one page per incident
 
-`status.json` (machine-readable summary) and `feed.xml` (Atom feed of incidents) are published
+`status.json` (machine-readable summary with `uptime_30d` and `uptime_90d` per component, in percent, and
+`page.updated_at` as the freshness stamp) and `feed.xml` (Atom feed of incidents) are published
 too, without links in the UI.
 
 ## How it works
