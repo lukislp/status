@@ -12,6 +12,11 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      test_alert:
+        description: Send one clearly marked test message to Telegram (checks the bot and both secrets)
+        type: boolean
+        default: false
 
 concurrency:
   group: status-check
@@ -49,6 +54,12 @@ jobs:
           path: .state-cache
           key: status-data-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: status-data-
+      - name: Send the Telegram test message
+        if: ${{ inputs.test_alert }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python3 -m statuspage notify-test
       - name: Probe components
         id: check
         env:
@@ -56,6 +67,10 @@ jobs:
           # that check is skipped with a warning; the chat's health check still runs. The value is
           # only sent with the request, never printed or stored.
           CHAT_PROBE_TOKEN: ${{ secrets.CHAT_PROBE_TOKEN }}
+          # Telegram alerts for automatic incidents (opened, escalated, recovered; see README).
+          # Without them the step only warns. Never printed or stored.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python3 -m statuspage check --cache .state-cache
       - name: Keep this run's state for the next run
         run: |

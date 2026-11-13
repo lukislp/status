@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import model, report, schedule
+from . import model, notify, report, schedule
 from .config import ConfigError, all_components, issue_labels, load_config
 from .issues import fetch_issues, items_from_issues
 from .manual import IncidentError, load_manual
@@ -53,6 +53,38 @@ def set_output(name: str, value: str) -> None:
             fh.write(f"{name}={value}\n")
 
 
+def send_alerts(data: dict, config: dict, env, post=notify.urllib_post) -> list:
+    """Telegram alerts for automatic incidents (notify.py); marks delivered ones in `data`.
+    Never fails the run: missing secrets or a failed send only produce workflow annotations."""
+    notifier = notify.from_env(env, post)
+    if notifier is None:
+        print("::warning title=Telegram alerts off::TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not set; no alerts are sent")
+        return []
+    names = {c["id"]: c["name"] for c in all_components(config)}
+    sent, failed = notify.dispatch(data, notifier, names, config["site"]["base_url"])
+    for alert in sent:
+        print(f"alert sent: {alert.kind} {alert.incident_id}")
+    if failed:
+        # notify.py keeps the reason (for example "HTTP 502") token-free, but only logs the count
+        # here: the reason of the last failure is enough to tell Telegram trouble from a bad token.
+        print(f"::warning title=Telegram alert not delivered::{len(failed)} alert(s) not delivered ({failed[-1].reason}); retried on the next run")
+    return sent
+
+
+def cmd_notify_test(args) -> int:
+    notifier = notify.from_env(os.environ)
+    if notifier is None:
+        print("error: TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set", file=sys.stderr)
+        return 1
+    try:
+        notifier.send("🧪 Test: Die Alarme der Statusseite funktionieren (keine echte Störung)")
+    except notify.NotifyError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print("test message sent")
+    return 0
+
+
 def cmd_check(args) -> int:
     config = load_config(args.config)
     settings = config["settings"]
@@ -91,8 +123,12 @@ def cmd_check(args) -> int:
             scheduled.append((comp["id"], check, result))
 
     data, events = model.apply_run(data, config, results, now)
-    publish = args.force_publish or model.should_publish(
-        events, data["status"].get("published_at"), now, settings["publish_interval_minutes"]
+    alerts_sent = send_alerts(data, config, os.environ)
+    publish = (
+        args.force_publish
+        # A delivered alert is remembered only in data/, so it has to reach the repository.
+        or bool(alerts_sent)
+        or model.should_publish(events, data["status"].get("published_at"), now, settings["publish_interval_minutes"])
     )
     if publish:
         data["status"]["published_at"] = model.iso(now)
@@ -173,6 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     build.add_argument("--issues", help="JSON file written by fetch-issues (or a fixture)")
     fetch = sub.add_parser("fetch-issues", help="download incident/maintenance issues (needs GITHUB_TOKEN)")
     fetch.add_argument("--out", default=str(ROOT / ".issues.json"))
+    sub.add_parser("notify-test", help="send one test message to Telegram (needs TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)")
     sub.add_parser("labels", help="print the issue labels this page understands")
     sub.add_parser("validate", help="validate config.json and incidents/*.md")
     args = parser.parse_args(argv)
@@ -183,6 +220,7 @@ def main(argv: list[str] | None = None) -> int:
             "validate": cmd_validate,
             "fetch-issues": cmd_fetch_issues,
             "labels": cmd_labels,
+            "notify-test": cmd_notify_test,
         }
         return commands[args.command](args)
     except (ConfigError, IncidentError) as exc:
