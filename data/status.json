@@ -1,12 +1,12 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-11-13T11:55:10Z",
+   "checked_at": "2026-11-13T12:29:54Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 558,
+     "latency_ms": 507,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -15,19 +15,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 558,
+   "latency_ms": 507,
    "message": "",
-   "ok_streak": 378,
+   "ok_streak": 381,
    "open_incident": null,
    "status": "operational"
   },
   "mowdeck-demo": {
-   "checked_at": "2026-11-13T11:55:10Z",
+   "checked_at": "2026-11-13T12:29:54Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 598,
+     "latency_ms": 445,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -36,19 +36,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 598,
+   "latency_ms": 445,
    "message": "",
-   "ok_streak": 2334,
+   "ok_streak": 2337,
    "open_incident": null,
    "status": "operational"
   },
   "piwatch-demo": {
-   "checked_at": "2026-11-13T11:55:10Z",
+   "checked_at": "2026-11-13T12:29:54Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 599,
+     "latency_ms": 467,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -57,19 +57,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 599,
+   "latency_ms": 467,
    "message": "",
-   "ok_streak": 378,
+   "ok_streak": 381,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio": {
-   "checked_at": "2026-11-13T11:55:10Z",
+   "checked_at": "2026-11-13T12:29:54Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 246,
+     "latency_ms": 197,
      "name": "Home page",
      "ok": true,
      "phase": null,
@@ -78,19 +78,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 246,
+   "latency_ms": 197,
    "message": "",
-   "ok_streak": 2468,
+   "ok_streak": 2471,
    "open_incident": null,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-11-13T11:55:10Z",
+   "checked_at": "2026-11-13T12:29:54Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 608,
+     "latency_ms": 438,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -99,7 +99,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 619,
+     "latency_ms": 471,
      "name": "Demo login API",
      "ok": true,
      "phase": null,
@@ -108,13 +108,13 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 608,
+   "latency_ms": 438,
    "message": "",
-   "ok_streak": 2340,
+   "ok_streak": 2343,
    "open_incident": null,
    "status": "operational"
   }
  },
- "generated_at": "2026-11-13T11:55:10Z",
- "published_at": "2026-11-13T11:55:10Z"
+ "generated_at": "2026-11-13T12:29:54Z",
+ "published_at": "2026-11-13T12:29:54Z"
 }
