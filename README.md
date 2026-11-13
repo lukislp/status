@@ -311,6 +311,10 @@ scripts/setup-repo.sh                                     # do it
 Private keys only exist in a temporary directory during the run and are deleted afterwards.
 `--rotate-keys` replaces both keys.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Security problems: [SECURITY.md](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE)
