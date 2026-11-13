@@ -158,11 +158,11 @@ The `Pages` workflow rebuilds the page on pushes to `main` and on the owner's is
 
 ## Telegram alerts
 
-Alerts are German and link to the **German** incident page (`/incidents/<id>.html`).
+Alerts are English and link to the **English** incident page (`/en/incidents/<id>.html`).
 
 When an **automatic** incident opens (a component is *Partly down* or *Down* after
 `failure_threshold` failed runs) the checker sends one Telegram message; when it resolves, one
-"Wieder da" message. If the incident later gets worse (*Partly down* to *Down*) it sends one more.
+"Recovered" message. If the incident later gets worse (*Partly down* to *Down*) it sends one more.
 No alert for *Slow*, and none for incidents or maintenance you post yourself.
 
 Setup (once):

@@ -335,12 +335,13 @@ class AutomaticIncidentTemplateTest(unittest.TestCase):
         self.assertTrue(german.startswith("Die automatischen Prüfungen für App schlagen fehl."), german)
         self.assertIn("Fehlerstelle - x: der Server antwortete mit einem unerwarteten Status.", german)
 
-    def test_telegram_alerts_link_to_the_german_incident_page(self):
+    def test_telegram_alerts_are_english_and_link_to_the_english_incident_page(self):
         data = outage()
         incident = data["incidents"]["incidents"][0]
         text = notify.pending_alerts(data, NAMES, BASE)[0].text
-        self.assertTrue(text.endswith(f"{BASE}/incidents/{incident['id']}.html"), text)
-        self.assertNotIn("/en/", text)
+        self.assertTrue(text.endswith(f"{BASE}/en/incidents/{incident['id']}.html"), text)
+        self.assertIn("since", text)
+        self.assertNotIn("seit", text)
 
 
 class ConfigTextTest(unittest.TestCase):

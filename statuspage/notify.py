@@ -19,6 +19,7 @@ import urllib.request
 from dataclasses import dataclass, replace
 from typing import Callable, Protocol
 
+from . import i18n
 from .model import IMPACTS, parse_iso
 
 OPENED = "opened"
@@ -56,12 +57,7 @@ class Alert:
 
 
 def _duration(minutes: int) -> str:
-    if minutes < 60:
-        return f"{max(minutes, 1)} Min."
-    hours, rest = divmod(minutes, 60)
-    if hours < 48:
-        return f"{hours} Std. {rest} Min." if rest else f"{hours} Std."
-    return f"{hours // 24} Tagen"
+    return i18n.fmt_duration(minutes, "en")
 
 
 def _clip(text: str) -> str:
@@ -79,14 +75,14 @@ def pending_alerts(data: dict, names: dict[str, str], base_url: str) -> list[Ale
             continue
         cid = incident["components"][0] if incident.get("components") else ""
         name = names.get(cid, cid or incident["title"])
-        url = f"{base}/incidents/{incident['id']}.html"
+        url = f"{base}/en/incidents/{incident['id']}.html"  # alerts are English
         impact = incident["impact"]
         if incident.get("resolved_at"):
             # Recovery only after the matching "down" alert was delivered; a problem the owner
             # never heard about needs no "all clear".
             if incident.get("alerted") and not incident.get("recovery_alerted"):
                 span = parse_iso(incident["resolved_at"]) - parse_iso(incident["created_at"])
-                text = f"🟢 Wieder da: {name} nach {_duration(int(span.total_seconds() // 60))}\n{url}"
+                text = f"🟢 Recovered: {name} after {_duration(int(span.total_seconds() // 60))}\n{url}"
                 due.append(Alert(RECOVERED, incident["id"], text, impact))
             continue
         if impact not in ALERT_IMPACTS:
@@ -96,11 +92,11 @@ def pending_alerts(data: dict, names: dict[str, str], base_url: str) -> list[Ale
         since = parse_iso(incident["created_at"]).strftime("%H:%M")
         detail = f" – {message}" if message else ""
         if not incident.get("alerted"):
-            text = f"{icon} {label}: {name}{detail} – seit {since} UTC\n{url}"
+            text = f"{icon} {label}: {name}{detail} – since {since} UTC\n{url}"
             due.append(Alert(OPENED, incident["id"], text, impact))
         elif IMPACTS.index(impact) > IMPACTS.index(incident.get("alerted_impact") or impact):
             # One update when "Partly down" turns into "Down"; never a repeat at the same level.
-            text = f"{icon} Schlimmer, jetzt {label}: {name}{detail} – seit {since} UTC\n{url}"
+            text = f"{icon} Worse, now {label}: {name}{detail} – since {since} UTC\n{url}"
             due.append(Alert(ESCALATED, incident["id"], text, impact))
     return due
 
