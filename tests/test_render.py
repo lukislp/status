@@ -137,11 +137,35 @@ class RenderTest(unittest.TestCase):
         self.assertIn('class="history-button" href="history.html"', index)
         self.assertIn("App login fails", (self.out / "history.html").read_text(encoding="utf-8"))
 
-    def test_no_feed_or_json_buttons(self):
+    def test_index_links_the_feed_near_the_top(self):
         index = (self.out / "index.html").read_text(encoding="utf-8")
-        self.assertNotIn('href="feed.xml">', index.split("</head>")[1])
+        main = index.split('<main id="main"', 1)[1]
+        link = '<a class="feed-link" href="feed.xml"'
+        self.assertIn(link, main)
+        self.assertLess(main.index(link), main.index("banner banner-"))
+        self.assertIn("Subscribe (Atom)</span>", main)
         self.assertNotIn("status.json", index)
-        self.assertNotIn("Subscribe", index)
+
+    def test_incident_pages_link_the_feed_near_the_top(self):
+        for path in (self.out / "incidents").glob("*.html"):
+            main = path.read_text(encoding="utf-8").split('<main id="main"', 1)[1]
+            self.assertIn('<a class="feed-link" href="../feed.xml"', main, path.name)
+            self.assertLess(main.index("feed-link"), main.index("<h1"), path.name)
+
+    def test_feed_has_automatic_incidents_and_labelled_maintenance(self):
+        feed = (self.out / "feed.xml").read_text(encoding="utf-8")
+        entries = feed.split("<entry>")[1:]
+        auto = [e for e in entries if "/incidents/auto-web-" in e]
+        self.assertEqual(len(auto), 1)
+        self.assertIn("Web is unavailable", auto[0])
+        self.assertIn('<category term="incident"', auto[0])
+        maintenance = [e for e in entries if "/incidents/db-upgrade.html" in e]
+        self.assertEqual(len(maintenance), 1)
+        self.assertIn("<title>Maintenance: ", maintenance[0])
+        self.assertIn('<category term="maintenance" label="Maintenance"/>', maintenance[0])
+        self.assertIn("Scheduled", maintenance[0])
+        manual = [e for e in entries if "2026-10-30-login" in e][0]
+        self.assertNotIn("Maintenance: ", manual)
 
     def test_day_bar_shows_incident_colour(self):
         index = (self.out / "index.html").read_text(encoding="utf-8")

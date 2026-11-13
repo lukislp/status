@@ -244,6 +244,17 @@ def page(ctx: Context, title: str, body: str, prefix: str = "", description: str
 # --------------------------------------------------------------------------- index
 
 
+FEED_ICON = (
+    '<svg class="feed-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+    '<circle cx="3" cy="13" r="1.8"/><path d="M2 7.5a6.5 6.5 0 0 1 6.5 6.5M2 2.5A11.5 11.5 0 0 1 13.5 14" '
+    'fill="none" stroke-width="2" stroke-linecap="round"/></svg>'
+)
+
+
+def feed_link(prefix: str) -> str:
+    return f'<a class="feed-link" href="{prefix}feed.xml" type="application/atom+xml">{FEED_ICON}<span>Subscribe (Atom)</span></a>'
+
+
 def render_incident_card(ctx: Context, incident: dict, prefix: str) -> str:
     impact = incident["impact"]
     rows = []
@@ -411,7 +422,8 @@ def render_index(ctx: Context) -> str:
         )
     checked = ctx.data["status"].get("generated_at")
     checked_html = f'<p class="checked">Last checked <time datetime="{checked}">{fmt_dt(checked)}</time></p>' if checked else ""
-    body = f"""{cards}
+    body = f"""<p class="feed-row">{feed_link("")}</p>
+{cards}
 {render_maintenance(ctx)}
 <div class="banner banner-{overall}" role="status"><span class="banner-icon" aria-hidden="true"></span><span>{BANNER_LABELS[overall]}</span></div>
 <div class="components">
@@ -441,7 +453,7 @@ def render_incident_page(ctx: Context, incident: dict) -> str:
     origin = (
         '<p class="meta">Opened automatically by the uptime checks.</p>' if incident.get("auto") else ""
     )
-    body = f"""<p class="crumb"><a href="{prefix}">&larr; Current status</a></p>
+    body = f"""<div class="top-row"><p class="crumb"><a href="{prefix}">&larr; Current status</a></p>{feed_link(prefix)}</div>
 <h1 class="incident-title impact-text-{incident['impact']}">{escape(incident['title'])}</h1>
 <p class="impact-pill impact-{incident['impact']}">{IMPACT_LABELS[incident['impact']]}</p>
 {window}{origin}
@@ -544,14 +556,22 @@ def render_feed(ctx: Context) -> str:
     entries = []
     for incident in ctx.incidents[:50]:
         url = f"{base}/incidents/{incident['id']}.html"
-        content = "".join(
+        maintenance = incident["impact"] == "maintenance"
+        title = f"Maintenance: {incident['title']}" if maintenance else incident["title"]
+        window = (
+            f"<p><strong>Scheduled</strong> for {fmt_dt(incident['scheduled_start'])} to {fmt_dt(incident['scheduled_end'])}</p>"
+            if maintenance and incident.get("scheduled_start")
+            else ""
+        )
+        content = window + "".join(
             f"<p><strong>{UPDATE_LABELS.get(u['status'], u['status'])}</strong> ({fmt_dt(u['at'])}) - {inline_md(' '.join(u['body'].split()))}</p>"
             for u in reversed(incident["updates"])
         )
         entries.append(
             f"""  <entry>
     <id>{escape(url)}</id>
-    <title>{escape(incident['title'])}</title>
+    <title>{escape(title)}</title>
+    <category term="{'maintenance' if maintenance else 'incident'}" label="{'Maintenance' if maintenance else 'Incident'}"/>
     <link rel="alternate" type="text/html" href="{escape(url)}"/>
     <published>{incident['updates'][0]['at']}</published>
     <updated>{incident['updates'][-1]['at']}</updated>

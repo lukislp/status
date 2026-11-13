@@ -21,8 +21,10 @@ library Python. The page loads nothing from third parties, sets no cookies and h
 - an **Incident history** page and one page per incident
 
 `status.json` (machine-readable summary with `uptime_30d` and `uptime_90d` per component, in percent, and
-`page.updated_at` as the freshness stamp) and `feed.xml` (Atom feed of incidents) are published
-too, without links in the UI.
+`page.updated_at` as the freshness stamp) is published too, without a link in the UI. `feed.xml`
+(Atom feed of automatic and manual incidents and maintenance announcements, the latter titled
+"Maintenance: ...") is linked as "Subscribe (Atom)" at the top of the main page and of every
+incident page.
 
 ## How it works
 
@@ -36,6 +38,7 @@ statuspage/
   report.py           the workflow log lines (phase, timings, cf-ray)
   issues.py           GitHub Issues -> incidents / maintenance
   manual.py           incidents/*.md and maintenance/*.md (file fallback)
+  notify.py           Telegram alerts for automatic incidents (send-only), exactly-once markers
   render.py           static HTML, status.json, feed.xml
 site/                 stylesheet, the small keyboard script for the bars, favicon
 data/                 written by the checker: status.json, history.json, incidents.json
@@ -140,6 +143,39 @@ Runs in between carry their state forward in the Actions cache. The commit is ma
 `sync` job commits them, and GitHub itself signs the commit ("Verified"). The App is a bypass
 actor of the `main` ruleset and the policy in `.github/lktec-bot.yml` limits it to `data/`.
 The `Pages` workflow rebuilds the page on pushes to `main` and on the owner's issue activity.
+
+## Telegram alerts
+
+When an **automatic** incident opens (a component is *Partly down* or *Down* after
+`failure_threshold` failed runs) the checker sends one Telegram message; when it resolves, one
+"Wieder da" message. If the incident later gets worse (*Partly down* to *Down*) it sends one more.
+No alert for *Slow*, and none for incidents or maintenance you post yourself.
+
+Setup (once):
+
+1. Talk to [@BotFather](https://t.me/BotFather), `/newbot`, and keep the token.
+2. Send any message to the new bot (or add it to a group), then open
+   `https://api.telegram.org/bot<token>/getUpdates` and read `chat.id` from the result.
+3. Add the repository secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
+4. Run the **Check** workflow manually with `test_alert` ticked: it sends one message marked as a
+   test, and fails with a readable error if a secret is missing or Telegram refuses the request.
+
+Without both secrets the check step only prints a warning annotation and sends nothing.
+
+The bot is send-only. Every message goes to the single chat in `TELEGRAM_CHAT_ID` through
+`sendMessage`; the code never calls `getUpdates`, never reads incoming messages, keeps no subscriber
+list, handles no commands such as `/start` and sets no webhook. Anyone who presses Start in the bot
+receives nothing. (The `getUpdates` call in step 2 is a one-off by hand to find your chat id.)
+A Telegram outage (for example HTTP 502) or a wrong token only produces a token-free warning
+annotation, and the alert is retried on the next run.
+
+Exactly once: what is due is derived from `data/incidents.json`. An incident gets `alerted`
+(and `alerted_impact`) after its alert was delivered, and `recovery_alerted` after the recovery
+alert. The marker is stored only after Telegram answered 200, so a failed send is retried on the
+next run (every five minutes) and a delivered one is never repeated. A delivered alert also
+forces a publish, so the marker reaches the repository and survives a lost Actions cache. A
+recovery alert is only sent for incidents whose "down" alert was delivered. The bot token is part
+of the Telegram URL, so error texts are redacted and the token is never printed or stored.
 
 ## Posting an incident
 
