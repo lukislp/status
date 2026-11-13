@@ -20,11 +20,22 @@ library Python. The page loads nothing from third parties, sets no cookies and h
   uptime percentage
 - an **Incident history** page and one page per incident
 
+**Languages.** The page is German at `/` and English under `/en/` (same structure: `index.html`,
+`history.html`, `incidents/<id>.html`, `feed.xml`). Every page has a DE | EN switch to the same page in
+the other language, `hreflang` alternates (German is `x-default`) and a canonical URL. All fixed
+texts, date formats (German: `13.11.2026, 21:05 UTC`) and the wording of automatic incidents live in
+`statuspage/i18n.py`; a test fails when a text exists in one language only. Component names and
+descriptions are English in `config.json` with optional German `name_de` / `description_de`
+(missing German text falls back to English). Incident and maintenance texts you write yourself are
+shown as written in both languages; the automatic incidents' sentences are generated in both. The
+check messages inside them (for example `HTTP 503`) stay as the checker wrote them.
+
 `status.json` (machine-readable summary with `uptime_30d` and `uptime_90d` per component, in percent, and
-`page.updated_at` as the freshness stamp) is published too, without a link in the UI. `feed.xml`
-(Atom feed of automatic and manual incidents and maintenance announcements, the latter titled
-"Maintenance: ...") is linked as "Subscribe (Atom)" at the top of the main page and of every
-incident page.
+`page.updated_at` as the freshness stamp) is published too, without a link in the UI. It exists once,
+at `/status.json`, and is not translated (English descriptions, ids as keys). `feed.xml` (Atom feed of
+automatic and manual incidents and maintenance announcements, the latter titled "Wartung: ..." /
+"Maintenance: ...") exists per language, `/feed.xml` (German) and `/en/feed.xml`, and is linked as
+"Abonnieren (Atom)" / "Subscribe (Atom)" at the top of the main page and of every incident page.
 
 ## How it works
 
@@ -39,7 +50,8 @@ statuspage/
   issues.py           GitHub Issues -> incidents / maintenance
   manual.py           incidents/*.md and maintenance/*.md (file fallback)
   notify.py           Telegram alerts for automatic incidents (send-only), exactly-once markers
-  render.py           static HTML, status.json, feed.xml
+  i18n.py             pure: every user-facing text in German and English, date and duration formats
+  render.py           static HTML (German at /, English under /en/), status.json, one feed.xml per language
 site/                 stylesheet, the small keyboard script for the bars, favicon
 data/                 written by the checker: status.json, history.json, incidents.json
 incidents/ maintenance/   optional hand-written entries (see the _template.md files)
@@ -146,6 +158,8 @@ The `Pages` workflow rebuilds the page on pushes to `main` and on the owner's is
 
 ## Telegram alerts
 
+Alerts are German and link to the **German** incident page (`/incidents/<id>.html`).
+
 When an **automatic** incident opens (a component is *Partly down* or *Down* after
 `failure_threshold` failed runs) the checker sends one Telegram message; when it resolves, one
 "Wieder da" message. If the incident later gets worse (*Partly down* to *Down*) it sends one more.
@@ -227,12 +241,18 @@ Add an entry to a group in `config.json`:
   "id": "newapp-demo",
   "name": "New app demo",
   "description": "Shown in the ? tooltip.",
+  "name_de": "Neue App-Demo",
+  "description_de": "Wird im ?-Tooltip der deutschen Seite gezeigt.",
   "checks": [
     { "name": "Web app", "url": "https://newapp-demo.lktec.org", "expect_body_contains": "New App" },
     { "name": "API", "url": "https://newapp-demo.lktec.org/api/health", "expect_json": { "ok": true } }
   ]
 }
 ```
+
+`name_de` and `description_de` are optional (non-empty strings); the German page uses them and
+falls back to `name` / `description`. Imprint and privacy links of the German page can be set with
+`site.imprint_url_de` / `site.privacy_url_de`.
 
 Check options: `expect_status` (default `200`, or a list), `expect_header` (`{"Name": "value"}`),
 `expect_body_contains`, `expect_json` (top-level fields).

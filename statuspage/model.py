@@ -11,28 +11,12 @@ import copy
 import json
 from datetime import datetime, timedelta, timezone
 
-from . import diagnosis
+from . import diagnosis, i18n
 from .config import all_components
 
 # Component statuses, least to most severe. "maintenance" ranks below "degraded" so that a real
 # problem during a maintenance window still shows as the problem.
 SEVERITY = ["operational", "maintenance", "degraded", "partial", "major"]
-STATUS_LABELS = {
-    "operational": "Running",
-    "maintenance": "Maintenance",
-    "degraded": "Slow",
-    "partial": "Partly down",
-    "major": "Down",
-    "planned": "Coming soon",
-    "unknown": "No data yet",
-}
-BANNER_LABELS = {
-    "operational": "Everything is up and running",
-    "maintenance": "Planned maintenance is underway",
-    "degraded": "Some services are slower than usual",
-    "partial": "Some services are partly unavailable",
-    "major": "A service is currently down",
-}
 # Incident impact <-> component status.
 IMPACT_FOR_STATUS = {"degraded": "minor", "partial": "major", "major": "critical"}
 STATUS_FOR_IMPACT = {
@@ -253,15 +237,15 @@ def check_phase(c: dict) -> str | None:
     return (c.get("diag") or {}).get("phase")
 
 
+def where_parts(checks: list[dict]) -> list[list[str]]:
+    """[check name, phase] for each failed check whose phase is known: the data behind the
+    public "where it failed" sentence, which is worded per language (i18n.where_sentence). Only
+    the phase, never a request id, address or timing."""
+    return [[c["name"], check_phase(c)] for c in checks if not c["ok"] and check_phase(c) in diagnosis.PHASE_TEXT]
+
+
 def where_failed(checks: list[dict]) -> str:
-    """Public sentence for an incident: at which step each failed check broke. Only the phase
-    wording from diagnosis.PHASE_TEXT, never a request id, address or timing."""
-    parts = [
-        f"{c['name']}: {diagnosis.PHASE_TEXT[check_phase(c)]}"
-        for c in checks
-        if not c["ok"] and check_phase(c) in diagnosis.PHASE_TEXT
-    ]
-    return f"Where it failed - {'; '.join(parts)}." if parts else ""
+    return i18n.where_sentence("en", where_parts(checks))
 
 
 # --------------------------------------------------------------------------- data files
@@ -391,13 +375,13 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
                 open_id = None
 
             if failed_run and fail_streak >= threshold and not open_id:
-                incident = _open_auto_incident(comp, status, message, where_failed(checks), first_fail_at, stamp)
+                incident = _open_auto_incident(comp, status, message, where_parts(checks), first_fail_at, stamp)
                 incidents.append(incident)
                 by_id[incident["id"]] = incident
                 open_id = incident["id"]
                 events["opened"].append(open_id)
             elif open_id and failed_run:
-                _escalate_auto_incident(by_id[open_id], status, message, stamp)
+                _escalate_auto_incident(by_id[open_id], comp, status, message, stamp)
             elif open_id and ok_streak >= recovery:
                 _resolve_auto_incident(by_id[open_id], comp, stamp)
                 events["resolved"].append(open_id)
@@ -439,57 +423,49 @@ def stored_check(c: dict, stamp: str) -> dict:
     return entry
 
 
-def _open_auto_incident(comp: dict, status: str, message: str, where: str, started: str, stamp: str) -> dict:
-    detail = f"{message}. {where}" if message and where else message or where
+def _open_auto_incident(comp: dict, status: str, message: str, where: list, started: str, stamp: str) -> dict:
+    """The stored `title` and `body` are English; `tpl` lets the renderer word them in either
+    language (i18n.render_tpl)."""
     compact = started.replace("-", "").replace(":", "").replace("T", "-")[:13]
-    verb = "is unavailable" if status == "major" else "is partially unavailable"
+    title_tpl = {"key": "auto_title", "kind": "major" if status == "major" else "partial", "component": comp["id"]}
+    body_tpl = {"key": "auto_opened", "component": comp["id"], "message": message, "where": where}
     return {
         "id": f"auto-{comp['id']}-{compact}",
-        "title": f"{comp['name']} {verb}",
+        "title": _english(title_tpl, comp),
+        "tpl": title_tpl,
         "components": [comp["id"]],
         "impact": IMPACT_FOR_STATUS.get(status, "major"),
         "auto": True,
         "created_at": started,
         "resolved_at": None,
-        "updates": [
-            {
-                "status": "investigating",
-                "at": stamp,
-                "body": f"Automated checks for {comp['name']} are failing. {detail}".strip(),
-            }
-        ],
+        "updates": [_update("investigating", stamp, body_tpl, comp)],
     }
 
 
-def _escalate_auto_incident(incident: dict, status: str, message: str, stamp: str) -> None:
+def _english(tpl: dict, comp: dict) -> str:
+    return i18n.render_tpl("en", tpl, lambda _cid: comp["name"])
+
+
+def _update(status: str, stamp: str, tpl: dict, comp: dict) -> dict:
+    return {"status": status, "at": stamp, "body": _english(tpl, comp), "tpl": tpl}
+
+
+def _escalate_auto_incident(incident: dict, comp: dict, status: str, message: str, stamp: str) -> None:
     impact = IMPACT_FOR_STATUS.get(status)
     if impact and IMPACTS.index(impact) > IMPACTS.index(incident["impact"]):
         incident["impact"] = impact
-        incident["updates"].append(
-            {"status": "investigating", "at": stamp, "body": f"The problem got worse. {message}".strip()}
-        )
+        incident["updates"].append(_update("investigating", stamp, {"key": "auto_worse", "message": message}, comp))
 
 
 def _resolve_auto_incident(incident: dict, comp: dict, stamp: str) -> None:
     minutes = int((parse_iso(stamp) - parse_iso(incident["created_at"])).total_seconds() // 60)
     incident["resolved_at"] = stamp
-    incident["updates"].append(
-        {
-            "status": "resolved",
-            "at": stamp,
-            "body": f"Automated checks for {comp['name']} are passing again. "
-            f"The component was affected for about {format_duration(minutes)}.",
-        }
-    )
+    tpl = {"key": "auto_resolved", "component": comp["id"], "minutes": minutes}
+    incident["updates"].append(_update("resolved", stamp, tpl, comp))
 
 
 def format_duration(minutes: int) -> str:
-    if minutes < 60:
-        return f"{max(minutes, 1)} min"
-    hours, rest = divmod(minutes, 60)
-    if hours < 48:
-        return f"{hours} h {rest} min" if rest else f"{hours} h"
-    return f"{hours // 24} days"
+    return i18n.fmt_duration(minutes, "en")
 
 
 def should_publish(events: dict, published_at: str | None, now: datetime, interval_minutes: float) -> bool:

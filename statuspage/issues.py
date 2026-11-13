@@ -25,6 +25,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
+from . import i18n
 from .model import iso
 
 INCIDENT_KEYWORDS = ["investigating", "identified", "monitoring", "update", "resolved"]
@@ -162,8 +163,8 @@ def issue_to_item(issue: dict, authors: set[str], component_ids: set[str]) -> di
     if issue.get("state") == "closed" and issue.get("closed_at"):
         closed = parse_time(issue["closed_at"])
         if updates[-1]["status"] != final:
-            default = "The maintenance is complete." if kind == "maintenance" else "This incident has been resolved."
-            updates.append({"status": final, "at": closed, "body": default})
+            key = "issue_completed" if kind == "maintenance" else "issue_resolved"
+            updates.append({"status": final, "at": closed, "body": i18n.render_tpl("en", {"key": key}, str), "tpl": {"key": key}})
         item["resolved_at"] = updates[-1]["at"] if updates[-1]["status"] == final else closed
     elif updates[-1]["status"] == final:
         item["resolved_at"] = updates[-1]["at"]
