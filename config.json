@@ -63,6 +63,18 @@
               "report_json_fields": ["provider", "degraded", "ttftMs", "latencyMs", "reason"]
             }
           ]
+        },
+        {
+          "id": "links",
+          "name": "Links page (links.lktec.org)",
+          "description": "The link-in-bio page at links.lktec.org, served by Cloudflare Pages.",
+          "checks": [
+            {
+              "name": "Links page",
+              "url": "https://links.lktec.org",
+              "expect_body_contains": "Lukas Körber — Links"
+            }
+          ]
         }
       ]
     },
