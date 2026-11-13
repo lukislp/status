@@ -976,3 +976,34 @@ main.wrap {
 .feed-icon path {
   stroke: currentColor;
 }
+
+/* ------------------------------------------------------------------ language switch */
+
+.masthead-end {
+  display: flex;
+  align-items: center;
+  gap: 8px 20px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.lang-current {
+  color: var(--fg);
+}
+.lang-link {
+  color: var(--muted);
+}
+.lang-link:hover {
+  color: var(--fg);
+}
+.lang-sep {
+  color: var(--border);
+  font-weight: 400;
+}

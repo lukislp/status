@@ -28,9 +28,14 @@ SITE_KEYS = {
     "home_url",
     "imprint_url",
     "privacy_url",
+    "imprint_url_de",
+    "privacy_url_de",
     "repo_url",
 }
-COMPONENT_KEYS = {"id", "name", "description", "planned", "checks"}
+# `name_de` / `description_de` are the German page's wording; the plain keys are the English one
+# (and the fallback when a German text is missing).
+COMPONENT_KEYS = {"id", "name", "name_de", "description", "description_de", "planned", "checks"}
+TEXT_KEYS = ("name", "name_de", "description", "description_de")
 CHECK_KEYS = {
     "name",
     "url",
@@ -129,6 +134,9 @@ def _validate_component(comp: dict, seen: set[str]) -> None:
         raise ConfigError(f"component {cid}: unknown keys {sorted(unknown)}")
     if not comp.get("name"):
         raise ConfigError(f"component {cid}: name is required")
+    for key in TEXT_KEYS:
+        if key in comp and (not isinstance(comp[key], str) or not comp[key].strip()):
+            raise ConfigError(f"component {cid}: {key} must be a non-empty string")
     checks = comp.get("checks")
     if not isinstance(checks, list) or not checks:
         raise ConfigError(f"component {cid}: at least one check is required")
@@ -220,3 +228,11 @@ def issue_labels(config: dict) -> list[tuple[str, str]]:
 
 def all_components(config: dict) -> list[dict]:
     return [c for g in config["groups"] for c in g["components"]]
+
+
+def localized(comp: dict, key: str, lang: str) -> str:
+    """A component's `name` or `description` in `lang`: the German page uses `<key>_de` when
+    set, everything else (and a missing German text) falls back to the English `<key>`."""
+    if lang == "de" and comp.get(f"{key}_de"):
+        return comp[f"{key}_de"]
+    return comp.get(key) or ""

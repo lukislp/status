@@ -58,8 +58,8 @@ class PendingAlertsTest(unittest.TestCase):
         data = outage()
         (alert,) = notify.pending_alerts(data, NAMES, BASE)
         self.assertEqual(alert.kind, notify.OPENED)
-        self.assertTrue(alert.text.startswith("🔴 Down: Web – x: HTTP 503 – seit 12:05 UTC\n"))
-        self.assertTrue(alert.text.endswith(f"{BASE}/incidents/{alert.incident_id}.html"))
+        self.assertTrue(alert.text.startswith("🔴 Down: Web – x: HTTP 503 – since 12:05 UTC\n"))
+        self.assertTrue(alert.text.endswith(f"{BASE}/en/incidents/{alert.incident_id}.html"))
 
     def test_partial_outage_is_labelled_partly_down(self):
         (alert,) = notify.pending_alerts(partial_outage(), NAMES, BASE)
@@ -78,7 +78,7 @@ class PendingAlertsTest(unittest.TestCase):
         fake = FakeNotifier()
         sent, failed = notify.dispatch(data, fake, NAMES, BASE)
         self.assertEqual((len(sent), failed), (1, []))
-        self.assertTrue(fake.sent[0].startswith("🟢 Wieder da: Web nach 20 Min.\n"))
+        self.assertTrue(fake.sent[0].startswith("🟢 Recovered: Web after 20 min\n"))
         self.assertEqual(notify.dispatch(data, fake, NAMES, BASE), ([], []))
 
     def test_escalation_to_down_sends_one_update(self):
@@ -88,7 +88,7 @@ class PendingAlertsTest(unittest.TestCase):
         fake = FakeNotifier()
         sent, _ = notify.dispatch(data, fake, NAMES, BASE)
         self.assertEqual([a.kind for a in sent], [notify.ESCALATED])
-        self.assertIn("jetzt Down: App", fake.sent[0])
+        self.assertIn("now Down: App", fake.sent[0])
         data = run(data, {"app": [fail(), fail()]}, 20)
         self.assertEqual(notify.dispatch(data, fake, NAMES, BASE), ([], []))
 

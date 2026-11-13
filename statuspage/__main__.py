@@ -77,7 +77,7 @@ def cmd_notify_test(args) -> int:
         print("error: TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set", file=sys.stderr)
         return 1
     try:
-        notifier.send("🧪 Test: Die Alarme der Statusseite funktionieren (keine echte Störung)")
+        notifier.send("🧪 Test: status page alerts are working (not a real incident)")
     except notify.NotifyError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

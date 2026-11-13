@@ -60,17 +60,21 @@ class RenderTest(unittest.TestCase):
         self.now = T0 + timedelta(hours=8)
         manual = [parse_incident(INCIDENT, "2026-10-30-login", {"web", "app"}),
                   parse_incident(MAINTENANCE, "db-upgrade", {"web", "app"}, "maintenance")]
-        self.out = build(sample_data(), manual, self.now)
+        self.root = build(sample_data(), manual, self.now)
+        self.out = self.root / "en"  # the English tree; the German one is checked in test_i18n.py
 
     def test_expected_files(self):
-        for name in ["index.html", "history.html", "404.html", "status.json", "feed.xml", "CNAME",
-                     "style.css", "bars.js", "favicon.svg", "incidents/2026-10-30-login.html",
+        for name in ["index.html", "history.html", "feed.xml", "incidents/2026-10-30-login.html",
                      "incidents/db-upgrade.html"]:
-            self.assertTrue((self.out / name).is_file(), name)
-        self.assertEqual((self.out / "CNAME").read_text().strip(), "status.example.org")
+            self.assertTrue((self.root / name).is_file(), name)  # German at the root
+            self.assertTrue((self.out / name).is_file(), f"en/{name}")  # English under /en/
+        for name in ["404.html", "status.json", "CNAME", "style.css", "bars.js", "favicon.svg"]:
+            self.assertTrue((self.root / name).is_file(), name)
+        self.assertFalse((self.out / "status.json").exists())  # one language-neutral status.json
+        self.assertEqual((self.root / "CNAME").read_text().strip(), "status.example.org")
 
     def test_html_is_balanced(self):
-        for path in self.out.rglob("*.html"):
+        for path in self.root.rglob("*.html"):
             parser = TagBalance()
             parser.feed(path.read_text(encoding="utf-8"))
             self.assertEqual(parser.errors, [], path.name)
@@ -78,13 +82,13 @@ class RenderTest(unittest.TestCase):
 
     def test_no_third_party_requests(self):
         pattern = re.compile(r"""(?:src|href)\s*=\s*["'](?:https?:)?//|url\(\s*["']?(?:https?:)?//|@import""")
-        for path in self.out.rglob("*"):
+        for path in self.root.rglob("*"):
             if path.suffix not in (".html", ".css", ".js"):
                 continue
             text = path.read_text(encoding="utf-8")
             # Plain navigation links (<a href>) are fine: they are not loaded by the page.
             text = re.sub(r"<a\s[^>]*>", "", text)
-            text = re.sub(r'<link rel="alternate"[^>]*>', "", text)
+            text = re.sub(r'<link rel="(?:alternate|canonical)"[^>]*>', "", text)
             self.assertIsNone(pattern.search(text), path.name)
 
     def test_ninety_bars_per_component(self):
@@ -102,7 +106,7 @@ class RenderTest(unittest.TestCase):
         self.assertLess(web["uptime_90d"], 60.0)  # but inside the 90-day window
 
     def test_status_reflects_manual_incident_and_planned(self):
-        doc = json.loads((self.out / "status.json").read_text(encoding="utf-8"))
+        doc = json.loads((self.root / "status.json").read_text(encoding="utf-8"))
         by_id = {c["id"]: c for c in doc["components"]}
         self.assertEqual(by_id["soon"]["status"], "planned")
         self.assertIsNone(by_id["soon"]["uptime_90d"])
@@ -121,12 +125,12 @@ class RenderTest(unittest.TestCase):
         self.assertIn("Mon, Nov 2 &middot; 02:00&ndash;03:00 UTC", index)
         # No maintenance files -> no section at all.
         out = build(sample_data(), [], self.now)
-        self.assertNotIn('class="maintenance"', (out / "index.html").read_text(encoding="utf-8"))
+        self.assertNotIn('class="maintenance"', (out / "en" / "index.html").read_text(encoding="utf-8"))
 
     def test_running_maintenance_sets_banner(self):
         manual = [parse_incident(MAINTENANCE, "db-upgrade", {"web", "app"}, "maintenance")]
         out = build(sample_data(), manual, T0.replace(month=11, day=2, hour=2, minute=30))
-        index = (out / "index.html").read_text(encoding="utf-8")
+        index = (out / "en" / "index.html").read_text(encoding="utf-8")
         self.assertIn("mw mw-in-progress", index)
         self.assertIn("banner-maintenance", index)
 
@@ -176,7 +180,7 @@ class RenderTest(unittest.TestCase):
     def test_banner_and_active_incident(self):
         manual = [parse_incident(INCIDENT.replace("## resolved 2026-10-30 18:40\nFixed.\n", ""), "open", {"web", "app"})]
         out = build(sample_data(), manual, self.now)
-        index = (out / "index.html").read_text(encoding="utf-8")
+        index = (out / "en" / "index.html").read_text(encoding="utf-8")
         self.assertIn("Some services are partly unavailable", index)
         self.assertIn('class="incident-card impact-major"', index)
         self.assertIn("<strong>looking</strong>", index)
@@ -195,9 +199,10 @@ class RenderTest(unittest.TestCase):
         self.assertIn("Web is unavailable", auto[0].read_text(encoding="utf-8"))
 
     def test_uptime_formatting(self):
-        self.assertEqual(render.fmt_uptime(100.0), "100.0 % uptime")
-        self.assertEqual(render.fmt_uptime(99.996), "99.99 % uptime")
-        self.assertEqual(render.fmt_uptime(None), "No data yet")
+        self.assertEqual(render.fmt_uptime(100.0, "en"), "100.0 % uptime")
+        self.assertEqual(render.fmt_uptime(99.996, "en"), "99.99 % uptime")
+        self.assertEqual(render.fmt_uptime(None, "en"), "No data yet")
+        self.assertEqual(render.fmt_uptime(99.996, "de"), "99,99 % Verfügbarkeit")
 
 
 if __name__ == "__main__":

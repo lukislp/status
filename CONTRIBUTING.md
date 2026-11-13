@@ -13,7 +13,7 @@ This is a small, stdlib-only Python status page (`statuspage/`), published on Gi
 
 - **Conventional Commits** for all commits, in English: `feat: ...`, `fix(check): ...`, `docs: ...`, `ci: ...`, `chore: ...`. Breaking changes use `!` or a `BREAKING CHANGE:` footer.
 - **Signed and signed off**: `git commit -S -s` (a verified signature plus the Developer Certificate of Origin sign-off).
-- Everything is written in English: code, comments, commits, documentation.
+- Everything is written in English: code, comments, commits, documentation. The one exception is the German side of the page: its texts are in `statuspage/i18n.py` (every key in both languages, a test checks it) and `name_de` / `description_de` in `config.json`.
 - No third-party Python dependencies: the checker and the renderer use the standard library only. The built page makes no third-party requests and sets no cookies.
 
 ## Run it locally
@@ -44,6 +44,7 @@ Every monitored thing is a component in a group:
 }
 ```
 
+- `name_de` and `description_de` are optional German texts for the German page (`/`); the English page (`/en/`) uses `name` and `description`.
 - `id` is unique and lower-case; incidents and the `component:*` issue labels refer to it.
 - A check has a `name` and a `url`, and optional expectations: `expect_status`, `expect_body_contains`, `expect_header`, `expect_json`. Per-check overrides: `method`, `interval_minutes`, `timeout_seconds`, `slow_ms`.
 - Secrets never go into `config.json`. A header value comes from an environment variable named by `headers_from_env` (the secret itself lives in the repository secrets).

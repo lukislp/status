@@ -6,6 +6,8 @@
     "home_url": "https://lktec.org",
     "imprint_url": "https://lktec.org/en/imprint",
     "privacy_url": "https://lktec.org/en/imprint",
+    "imprint_url_de": "https://lktec.org/impressum",
+    "privacy_url_de": "https://lktec.org/impressum",
     "repo_url": "https://github.com/lukislp/status"
   },
   "settings": {
@@ -31,6 +33,7 @@
           "id": "portfolio",
           "name": "Portfolio (lktec.org)",
           "description": "The personal site at lktec.org, served by Cloudflare Pages.",
+          "description_de": "Die persönliche Website unter lktec.org, ausgeliefert über Cloudflare Pages.",
           "checks": [
             {
               "name": "Home page",
@@ -42,7 +45,9 @@
         {
           "id": "portfolio-chat",
           "name": "Chat assistant (lktec.org)",
+          "name_de": "Chat-Assistent (lktec.org)",
           "description": "The AI chat assistant on lktec.org: its configuration on every run, a real question and answer once a day.",
+          "description_de": "Der KI-Chat-Assistent auf lktec.org: bei jedem Durchlauf wird seine Konfiguration geprüft, einmal täglich eine echte Frage mit Antwort.",
           "checks": [
             {
               "name": "Health",
@@ -67,7 +72,9 @@
         {
           "id": "links",
           "name": "Links page (links.lktec.org)",
+          "name_de": "Link-Seite (links.lktec.org)",
           "description": "The link-in-bio page at links.lktec.org, served by Cloudflare Pages.",
+          "description_de": "Die Link-in-Bio-Seite unter links.lktec.org, ausgeliefert über Cloudflare Pages.",
           "checks": [
             {
               "name": "Links page",
@@ -84,7 +91,9 @@
         {
           "id": "homelabhub-demo",
           "name": "Homelab Hub demo",
+          "name_de": "Homelab-Hub-Demo",
           "description": "Read-only demo of Homelab Hub with sample data.",
+          "description_de": "Schreibgeschützte Demo des Homelab Hub mit Beispieldaten.",
           "checks": [
             {
               "name": "Web app",
@@ -96,7 +105,9 @@
         {
           "id": "piwatch-demo",
           "name": "PiWatch demo",
+          "name_de": "PiWatch-Demo",
           "description": "Demo of the PiWatch k3s monitoring dashboard.",
+          "description_de": "Demo des PiWatch-Dashboards zur Überwachung von k3s.",
           "checks": [
             {
               "name": "Web app",
@@ -108,7 +119,9 @@
         {
           "id": "studylife-demo",
           "name": "Studylife demo",
+          "name_de": "Studylife-Demo",
           "description": "Demo of the Studylife web app, including its demo login API.",
+          "description_de": "Demo der Studylife-Web-App, einschließlich ihrer Demo-Login-API.",
           "checks": [
             {
               "name": "Web app",
@@ -125,7 +138,9 @@
         {
           "id": "mowdeck-demo",
           "name": "MowDeck demo",
+          "name_de": "MowDeck-Demo",
           "description": "Demo of MowDeck, the self-hosted robot mower dashboard.",
+          "description_de": "Demo von MowDeck, dem selbst gehosteten Dashboard für Mähroboter.",
           "checks": [
             {
               "name": "Web app",
