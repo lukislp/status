@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import model, report
+from . import model, report, schedule
 from .config import ConfigError, all_components, issue_labels, load_config
 from .issues import fetch_issues, items_from_issues
 from .manual import IncidentError, load_manual
@@ -57,14 +57,39 @@ def cmd_check(args) -> int:
     config = load_config(args.config)
     settings = config["settings"]
     data = load_data(Path(args.data), Path(args.cache) if args.cache else None)
-    live = [c for c in all_components(config) if not c.get("planned")]
-    flat = [(comp, check) for comp in live for check in comp["checks"]]
-    responses = probe_all([check for _, check in flat], settings["timeout_seconds"], settings["retry_delay_seconds"])
-    results: dict[str, list[dict]] = {}
-    for (comp, check), response in zip(flat, responses):
-        results.setdefault(comp["id"], []).append(model.evaluate_check(check, response, settings))
-
     now = datetime.now(timezone.utc).replace(microsecond=0)
+    live = [c for c in all_components(config) if not c.get("planned")]
+    # Per check: probe it now, carry its last result forward (a check with its own interval
+    # that is not due yet) or skip it (a secret it needs is not set). Results keep config order.
+    planned: list[tuple[dict, dict, str, dict | None]] = []
+    notes: list[str] = []
+    for comp in live:
+        state = data["status"]["components"].get(comp["id"])
+        for check in comp["checks"]:
+            action, previous = schedule.plan_check(check, state, now, os.environ)
+            if action == schedule.SKIP:
+                notes.append(report.skipped_line(comp["id"], check, schedule.missing_env(check, os.environ)))
+                continue
+            planned.append((comp, check, action, previous))
+    to_probe = [(comp, check) for comp, check, action, _ in planned if action == schedule.PROBE]
+    responses = probe_all(
+        [check for _, check in to_probe],
+        settings["timeout_seconds"],
+        settings["retry_delay_seconds"],
+        headers=[schedule.resolve_headers(check, os.environ) for _, check in to_probe],
+    )
+    fresh = {id(check): response for (_, check), response in zip(to_probe, responses)}
+    results: dict[str, list[dict]] = {}
+    scheduled: list[tuple[str, dict, dict]] = []
+    for comp, check, action, previous in planned:
+        if action == schedule.CARRY:
+            result = schedule.carried_result(previous)
+        else:
+            result = model.evaluate_check(check, fresh[id(check)], settings)
+        results.setdefault(comp["id"], []).append(result)
+        if check.get("interval_minutes"):
+            scheduled.append((comp["id"], check, result))
+
     data, events = model.apply_run(data, config, results, now)
     publish = args.force_publish or model.should_publish(
         events, data["status"].get("published_at"), now, settings["publish_interval_minutes"]
@@ -76,6 +101,11 @@ def cmd_check(args) -> int:
     for comp in all_components(config):
         state = data["status"]["components"].get(comp["id"], {})
         print(report.component_line(comp["id"], state, results.get(comp["id"])))
+    for cid, check, result in scheduled:
+        due = schedule.next_due(check, {"checked_at": result.get("carried_from") or model.iso(now)})
+        print(report.scheduled_line(cid, result, model.iso(due) if due else None))
+    for note in notes:
+        print(note)
     for key in ("changed", "opened", "resolved"):
         if events[key]:
             print(f"{key}: {', '.join(events[key])}")

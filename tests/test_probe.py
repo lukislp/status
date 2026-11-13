@@ -159,6 +159,19 @@ class LocalServerTest(unittest.TestCase):
         self.assertEqual(result["diag"], result["attempts"][-1])
 
 
+@requires_openssl
+class PostRequestTest(unittest.TestCase):
+    def test_post_sends_an_empty_body_and_the_extra_headers(self):
+        with TestServer(lambda r: respond(r, body=b'{"ok": true}')) as server:
+            response = probe.fetch(server.url, 3, server.trusting_context(), method="POST",
+                                   headers={"X-Status-Probe": "s3cret"})
+            headers, body = server.httpd.posted
+        self.assertEqual(response["status"], 200)
+        self.assertEqual(headers["X-Status-Probe"], "s3cret")
+        self.assertEqual(body, b"")
+        self.assertNotIn("s3cret", repr(response))
+
+
 class RetryTest(unittest.TestCase):
     """probe_all with a fake fetcher: the retry rules stay as they were."""
 
@@ -193,6 +206,36 @@ class RetryTest(unittest.TestCase):
 
     def test_4xx_is_not_retried(self):
         self.assertEqual(self.run_probe([self.good(404)])[1], 1)
+
+
+class RequestOptionsTest(unittest.TestCase):
+    """probe_all hands a check's method, headers and own timeout to the fetcher."""
+
+    def test_plain_get_checks_call_the_fetcher_as_before(self):
+        calls = []
+
+        def fetcher(url, timeout):
+            calls.append((url, timeout))
+            return {"status": 200, "headers": {}, "body": b"", "latency_ms": 5, "error": None}
+
+        probe.probe_all([{"url": "https://a.example.org"}], 15, 0, fetcher=fetcher, tls_probe=lambda h, t: 9)
+        self.assertEqual(calls, [("https://a.example.org", 15)])
+
+    def test_post_with_headers_and_own_timeout(self):
+        calls = []
+
+        def fetcher(url, timeout, method="GET", headers=None):
+            calls.append((url, timeout, method, headers))
+            return {"status": 200, "headers": {}, "body": b"", "latency_ms": 5, "error": None}
+
+        checks = [{"url": "https://a.example.org"},
+                  {"url": "https://b.example.org/probe", "method": "POST", "timeout_seconds": 45}]
+        probe.probe_all(checks, 15, 0, fetcher=fetcher, tls_probe=lambda h, t: 9,
+                        headers=[None, {"X-Status-Probe": "t"}])
+        self.assertEqual(sorted(calls), [
+            ("https://a.example.org", 15, "GET", None),
+            ("https://b.example.org/probe", 45, "POST", {"X-Status-Probe": "t"}),
+        ])
 
 
 if __name__ == "__main__":

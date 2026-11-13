@@ -27,6 +27,7 @@ body:
       label: Affected components
       options:
         - label: "Portfolio (lktec.org) (`portfolio`)"
+        - label: "Chat assistant (lktec.org) (`portfolio-chat`)"
         - label: "Homelab Hub demo (`homelabhub-demo`)"
         - label: "PiWatch demo (`piwatch-demo`)"
         - label: "Studylife demo (`studylife-demo`)"

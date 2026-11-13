@@ -39,10 +39,23 @@ CHECK_KEYS = {
     "expect_body_contains",
     "expect_json",
     "maintenance_response",
+    "method",
+    "headers_from_env",
+    "interval_minutes",
+    "timeout_seconds",
+    "slow_ms",
+    "degraded_json",
+    "degraded_note",
+    "report_json_fields",
 }
+METHODS = {"GET", "POST"}
+# Every run is about five minutes apart; a shorter interval would mean "every run".
+MIN_INTERVAL_MINUTES = 5
 MAINTENANCE_RESPONSE_KEYS = {"status", "body_contains", "header"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+HEADER_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 
 
 class ConfigError(ValueError):
@@ -132,6 +145,49 @@ def _validate_component(comp: dict, seen: set[str]) -> None:
         if not isinstance(status, list) or not all(isinstance(s, int) for s in status):
             raise ConfigError(f"component {cid}: expect_status must be an int or a list of ints")
         _validate_maintenance_response(cid, check.get("maintenance_response"))
+        _validate_request_options(cid, check)
+    named = [c["name"] for c in checks if c.get("interval_minutes")]
+    for name in named:
+        if sum(1 for c in checks if c.get("name") == name) != 1:
+            raise ConfigError(f"component {cid}: a check with interval_minutes needs a unique name")
+
+
+def _positive_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+def _validate_request_options(cid: str, check: dict) -> None:
+    """The options of a check that is not a plain GET every run: method, secret headers, its own
+    interval, timeout and slow threshold, a degraded answer and the fields printed to the log."""
+    method = check.get("method", "GET")
+    if method not in METHODS:
+        raise ConfigError(f"component {cid}: method must be one of {sorted(METHODS)}")
+    headers = check.get("headers_from_env")
+    if headers is not None:
+        if not isinstance(headers, dict) or not headers:
+            raise ConfigError(f"component {cid}: headers_from_env must be a non-empty object")
+        for name, env in headers.items():
+            if not HEADER_NAME_RE.match(name) or not isinstance(env, str) or not ENV_NAME_RE.match(env):
+                raise ConfigError(
+                    f"component {cid}: headers_from_env maps a header name to an environment variable (UPPER_CASE)"
+                )
+    interval = check.get("interval_minutes")
+    if interval is not None:
+        if not _positive_number(interval) or interval < MIN_INTERVAL_MINUTES:
+            raise ConfigError(f"component {cid}: interval_minutes must be at least {MIN_INTERVAL_MINUTES}")
+        if not check.get("name"):
+            raise ConfigError(f"component {cid}: a check with interval_minutes needs a name")
+    for key in ("timeout_seconds", "slow_ms"):
+        if key in check and not _positive_number(check[key]):
+            raise ConfigError(f"component {cid}: {key} must be a positive number")
+    degraded = check.get("degraded_json")
+    if degraded is not None and (not isinstance(degraded, dict) or not degraded):
+        raise ConfigError(f"component {cid}: degraded_json must be a non-empty object")
+    if "degraded_note" in check and (not isinstance(check["degraded_note"], str) or not check["degraded_note"]):
+        raise ConfigError(f"component {cid}: degraded_note must be a non-empty string")
+    fields = check.get("report_json_fields")
+    if fields is not None and (not isinstance(fields, list) or not all(isinstance(f, str) and f for f in fields)):
+        raise ConfigError(f"component {cid}: report_json_fields must be a list of field names")
 
 
 def _validate_maintenance_response(cid: str, spec) -> None:

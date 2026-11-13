@@ -51,6 +51,11 @@ jobs:
           restore-keys: status-data-
       - name: Probe components
         id: check
+        env:
+          # The chat assistant's daily end-to-end probe (X-Status-Probe header). Without the secret
+          # that check is skipped with a warning; the chat's health check still runs. The value is
+          # only sent with the request, never printed or stored.
+          CHAT_PROBE_TOKEN: ${{ secrets.CHAT_PROBE_TOKEN }}
         run: python3 -m statuspage check --cache .state-cache
       - name: Keep this run's state for the next run
         run: |

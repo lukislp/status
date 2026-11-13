@@ -121,13 +121,27 @@ def lower_headers(headers) -> dict:
     return {k.lower(): v for k, v in (headers or {}).items()}
 
 
-def fetch(url: str, timeout: float, context: ssl.SSLContext | None = None) -> dict:
-    """One GET. Besides the response it returns how far the request got (`stage`), the
-    exception that stopped it (`exception`), whether response headers arrived (`answered`)
-    and cheap timings; deciding what that means is diagnosis.py's job."""
+def fetch(
+    url: str,
+    timeout: float,
+    context: ssl.SSLContext | None = None,
+    method: str = "GET",
+    headers: dict | None = None,
+) -> dict:
+    """One request, a GET unless the check says otherwise (a POST is sent with an empty body).
+    Besides the response it returns how far the request got (`stage`), the exception that
+    stopped it (`exception`), whether response headers arrived (`answered`) and cheap timings;
+    deciding what that means is diagnosis.py's job. `headers` may carry a secret (a check's
+    `headers_from_env`): they are sent and never returned, printed or stored."""
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/json;q=0.9,*/*;q=0.8"},
+        data=b"" if method == "POST" else None,
+        method=method,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+            **(headers or {}),
+        },
     )
     trace = Trace()
     opener = urllib.request.build_opener(TracingHTTPSHandler(context or tls_context(), trace))
@@ -205,24 +219,41 @@ def needs_retry(response: dict) -> bool:
 
 
 def probe_all(
-    checks: list[dict], timeout: float, retry_delay: float, fetcher=fetch, tls_probe=tls_days_left
+    checks: list[dict],
+    timeout: float,
+    retry_delay: float,
+    fetcher=fetch,
+    tls_probe=tls_days_left,
+    headers: list[dict | None] | None = None,
 ) -> list[dict]:
     """Probe every check (in parallel); a failed probe is retried once after `retry_delay`
     so that a single dropped packet on the runner does not count as downtime. The response of
-    the retry carries the first attempt under `previous`, so that both can be reported."""
+    the retry carries the first attempt under `previous`, so that both can be reported.
 
-    def one(check: dict) -> dict:
-        response = fetcher(check["url"], timeout)
+    A check's own `timeout_seconds` replaces `timeout`. `headers` lines up with `checks`: the
+    resolved extra request headers of each check (its `headers_from_env`), or None."""
+    extra = headers or [None] * len(checks)
+
+    def one(item: tuple[dict, dict | None]) -> dict:
+        check, hdrs = item
+        limit = check.get("timeout_seconds", timeout)
+        method = check.get("method", "GET")
+        options = {"method": method, "headers": hdrs} if method != "GET" or hdrs else {}
+
+        def attempt() -> dict:
+            return fetcher(check["url"], limit, **options)
+
+        response = attempt()
         if needs_retry(response):
             time.sleep(retry_delay)
-            retry = fetcher(check["url"], timeout)
+            retry = attempt()
             retry["previous"] = response
             return retry
         return response
 
     hosts = sorted({urlsplit(c["url"]).hostname for c in checks})
     with ThreadPoolExecutor(max_workers=8) as pool:
-        responses = list(pool.map(one, checks))
+        responses = list(pool.map(one, zip(checks, extra)))
         tls = dict(zip(hosts, pool.map(lambda h: tls_probe(h, timeout), hosts)))
     for check, response in zip(checks, responses):
         response["tls_days_left"] = tls.get(urlsplit(check["url"]).hostname)

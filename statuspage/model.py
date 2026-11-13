@@ -82,6 +82,10 @@ def evaluate_check(check: dict, response: dict, settings: dict) -> dict:
     `attempts` (every attempt's record, oldest first).
     """
     result, failure = _judge(check, response, settings)
+    if check.get("interval_minutes"):
+        result["interval"] = True
+    if check.get("report_json_fields"):
+        result["report"] = report_fields(response, check["report_json_fields"])
     result["diag"] = _diagnose(failure, response, result["slow"])
     earlier = response.get("previous")
     earlier_diags = evaluate_check(check, earlier, settings)["attempts"] if earlier else []
@@ -102,6 +106,8 @@ def _judge(check: dict, response: dict, settings: dict) -> tuple[dict, str | Non
         "ok": False,
         "slow": False,
         "tls_warning": False,
+        "degraded": False,
+        "degraded_note": None,
         "latency_ms": response.get("latency_ms"),
         "http_status": response.get("status"),
         "tls_days_left": response.get("tls_days_left"),
@@ -139,7 +145,9 @@ def _judge(check: dict, response: dict, settings: dict) -> tuple[dict, str | Non
         return result, diagnosis.FAIL_BODY
 
     expected_json = check.get("expect_json")
-    if expected_json:
+    degraded_json = check.get("degraded_json")
+    doc = None
+    if expected_json or degraded_json:
         try:
             doc = json.loads(text)
         except ValueError:
@@ -148,19 +156,47 @@ def _judge(check: dict, response: dict, settings: dict) -> tuple[dict, str | Non
         if not isinstance(doc, dict):
             result["error"] = "JSON response is not an object"
             return result, diagnosis.FAIL_BODY
-        for key, value in expected_json.items():
+        for key, value in (expected_json or {}).items():
             if doc.get(key) != value:
                 result["error"] = f"JSON field {key!r} is {doc.get(key)!r}, expected {value!r}"
                 return result, diagnosis.FAIL_BODY
 
     result["ok"] = True
+    if degraded_json and all(doc.get(k) == v for k, v in degraded_json.items()):
+        # Up, but the service says it is running on its fallback: shown like a slow answer.
+        result["degraded"] = True
+        result["degraded_note"] = check.get("degraded_note") or "reports a degraded state"
     latency = response.get("latency_ms")
-    if latency is not None and latency > settings["slow_ms"]:
+    if latency is not None and latency > check.get("slow_ms", settings["slow_ms"]):
         result["slow"] = True
     days = response.get("tls_days_left")
     if days is not None and days < settings["tls_warn_days"]:
         result["tls_warning"] = True
     return result, None
+
+
+REPORT_VALUE_MAX = 80
+
+
+def report_fields(response: dict, fields: list[str]) -> dict:
+    """The named top-level fields of a JSON answer, for the workflow log only (never stored or
+    published): scalars as they are, strings cut to REPORT_VALUE_MAX characters. Anything that is
+    not a JSON object gives {}."""
+    try:
+        doc = json.loads((response.get("body") or b"").decode("utf-8", errors="replace"))
+    except ValueError:
+        return {}
+    if not isinstance(doc, dict):
+        return {}
+    out = {}
+    for name in fields:
+        value = doc.get(name)
+        if isinstance(value, str):
+            out[name] = value[:REPORT_VALUE_MAX]
+        elif isinstance(value, (bool, int, float)) or value is None:
+            if name in doc:
+                out[name] = value
+    return out
 
 
 def is_maintenance_response(spec: dict | None, response: dict) -> bool:
@@ -191,7 +227,7 @@ def classify_component(checks: list[dict], fail_streak: int, threshold: int) -> 
         if fail_streak < threshold:
             return "degraded"
         return "major" if len(failed) == len(checks) else "partial"
-    if any(c["slow"] or c["tls_warning"] for c in checks):
+    if any(c["slow"] or c["tls_warning"] or c.get("degraded") for c in checks):
         return "degraded"
     return "operational"
 
@@ -202,6 +238,8 @@ def check_problem(c: dict) -> str | None:
         return f"{c['name']}: {c['error']}"
     if c["slow"]:
         return f"{c['name']}: slow response ({c['latency_ms']} ms)"
+    if c.get("degraded"):
+        return f"{c['name']}: {c.get('degraded_note') or 'reports a degraded state'}"
     if c["tls_warning"]:
         return f"{c['name']}: TLS certificate expires in {c['tls_days_left']} days"
     return None
@@ -376,19 +414,29 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
                 "ok_streak": ok_streak,
                 "first_fail_at": first_fail_at,
                 "open_incident": open_id,
-                "checks": [
-                    {
-                        **{k: c[k] for k in ("name", "ok", "latency_ms", "http_status", "tls_days_left", "error")},
-                        "phase": check_phase(c),
-                    }
-                    for c in checks
-                ],
+                "checks": [stored_check(c, stamp) for c in checks],
             }
             record_day(data["history"], cid, day, checks)
 
     data["status"]["generated_at"] = stamp
     trim(data, now, int(settings["retention_days"]), {c["id"] for c in all_components(config)})
     return data, events
+
+
+def stored_check(c: dict, stamp: str) -> dict:
+    """What data/status.json keeps of a check. A check with its own interval also keeps when it
+    was probed and its flags, so that later runs can carry the result forward (schedule.py)."""
+    entry = {
+        **{k: c[k] for k in ("name", "ok", "latency_ms", "http_status", "tls_days_left", "error")},
+        "phase": check_phase(c),
+    }
+    if c.get("interval"):
+        entry["checked_at"] = c.get("carried_from") or stamp
+        entry["slow"] = bool(c.get("slow"))
+        entry["tls_warning"] = bool(c.get("tls_warning"))
+        entry["degraded"] = bool(c.get("degraded"))
+        entry["degraded_note"] = c.get("degraded_note")
+    return entry
 
 
 def _open_auto_incident(comp: dict, status: str, message: str, where: str, started: str, stamp: str) -> dict:
