@@ -29,7 +29,8 @@ too, without links in the UI.
 ```
 config.json           sites, groups and checks
 statuspage/
-  probe.py            the only network code: GET per check (with timings), TLS expiry per host
+  probe.py            the only network code: one request per check (with timings), TLS expiry per host
+  schedule.py         pure: which checks this run probes, carries forward or skips
   diagnosis.py        pure: where a failed or slow check failed (phase), Cloudflare ids
   model.py            check evaluation, status rules, daily rollups, automatic incidents
   report.py           the workflow log lines (phase, timings, cf-ray)
@@ -42,9 +43,19 @@ incidents/ maintenance/   optional hand-written entries (see the _template.md fi
 scripts/setup-repo.sh one-time repository setup
 ```
 
-**Checks.** Every check is a GET (some demos answer HEAD with 405) that can expect a status
-code, a header, a piece of body text or a JSON field. A failed probe is retried once after a
-few seconds. Latency and the TLS certificate's remaining days are recorded.
+**Checks.** Every check is a GET (some demos answer HEAD with 405), or a POST with an empty
+body where the config says so, that can expect a status code, a header, a piece of body text or
+a JSON field. A failed probe is retried once after a few seconds. Latency and the TLS
+certificate's remaining days are recorded.
+
+**Checks with their own interval.** A check with `interval_minutes` is probed only when its last
+result is at least that old; the runs in between carry that result forward (it keeps counting for
+the component, and `data/status.json` keeps when it was probed). A check without a previous result
+is due at once, so a newly added check reports in the first run after the merge. The chat
+assistant's answer probe uses this: it asks the model a real question, so it runs once a day while
+the cheap health check runs every five minutes. A check whose `headers_from_env` names an
+environment variable that is not set (a missing repository secret) is skipped with a warning
+annotation in the run, and the component's other checks still run.
 
 **What a check records.** Besides the verdict, every probe keeps *where* a failed or slow check
 failed (the **phase**) and cheap timings, so that a failure can be attributed from the check run
@@ -79,6 +90,15 @@ studylife-demo       degraded     Web app: HTTP 502 (attempt 1: phase: timeout_r
 mowdeck-demo         operational  618 ms (cf-ray 9a1b2c3d4e5f6a7b-FRA, cf-cache-status DYNAMIC)
 ```
 
+A check with its own interval gets one more line: the outcome of this run's probe (HTTP status,
+latency and the JSON fields named in `report_json_fields`) or which earlier result is carried and
+when the next probe is due. Request headers (the probe token) are never printed:
+
+```
+portfolio-chat                    Answer probe: probed now, ok (HTTP 200; 3412 ms; provider=anthropic, ttftMs=912, latencyMs=3120)
+portfolio-chat                    Answer probe: ok (probed 2026-11-14T08:05:12Z, next probe at 2026-11-15T08:05:12Z)
+```
+
 A failed probe is retried once, and then both attempts are shown because they can differ. A
 `timeout_response` without a ray id means the request never got an answer from Cloudflare's side
 either; if a retry shows a ray id (or the site was reachable meanwhile), the ray id of the failing
@@ -96,6 +116,7 @@ id; the history format is unchanged. Data files written before the phase existed
 | --- | --- |
 | all checks pass | Running |
 | slower than `slow_ms` (5 s) or certificate expires in < `tls_warn_days` (7) | Slow |
+| a check's answer matches its `degraded_json` (the chat answered from its fallback model) | Slow |
 | one failed run | Slow (a single blip is not an outage) |
 | `failure_threshold` (2) failed runs in a row, every check failing | Down |
 | same, but only some of the component's checks failing | Partly down |
@@ -178,7 +199,25 @@ Add an entry to a group in `config.json`:
 ```
 
 Check options: `expect_status` (default `200`, or a list), `expect_header` (`{"Name": "value"}`),
-`expect_body_contains`, `expect_json` (top-level fields). Set `"planned": true` for a site that is
+`expect_body_contains`, `expect_json` (top-level fields).
+
+For a check that is more than a GET every run:
+
+| Option | Meaning |
+| --- | --- |
+| `method` | `GET` (default) or `POST` (sent with an empty body) |
+| `headers_from_env` | `{"Header-Name": "ENV_VAR"}`: request headers whose values come from the environment (repository secrets passed in `check.yml`); never printed or stored. Unset variable: the check is skipped with a warning |
+| `interval_minutes` | probe at most this often (at least 5) and carry the last result forward in between; needs a `name` unique in the component |
+| `timeout_seconds`, `slow_ms` | this check's own timeout and slow threshold instead of the settings |
+| `degraded_json` | top-level fields that mark a passing answer as degraded (shown as *Slow*, counts as up); `degraded_note` is the text for it |
+| `report_json_fields` | top-level JSON fields printed in the workflow log line (never published) |
+
+The chat assistant component (`portfolio-chat`) uses them: `GET /api/chat/health` every run, and
+once a day `POST /api/chat/probe` with the `X-Status-Probe` header from the repository secret
+`CHAT_PROBE_TOKEN` (the same value as `CHAT_PROBE_TOKEN` in the Cloudflare Pages production
+environment of lukislp/portfolio, which documents both endpoints). The probe answers
+`{"ok":true,"provider":...}`, with `"degraded":true` when the fallback model answered; a 503 is a
+failure and counts by `failure_threshold` like any other. Set `"planned": true` for a site that is
 not live yet - it shows as *Coming soon* and is not probed; remove the flag once it is live.
 
 `maintenance_response` (`{"status": 503, "header": {...}, "body_contains": "..."}`) declares a
@@ -226,6 +265,7 @@ scripts/setup-repo.sh                                     # do it
 | --- | --- |
 | `LKTEC_BOT_APP_ID` | secret, ID of the lktec-bot GitHub App (installed on the repository) - the script only checks that it exists |
 | `LKTEC_BOT_PRIVATE_KEY` | secret, private key of the App - the script only checks that it exists; with these two the App commits `data/` and GitHub signs the commit |
+| `CHAT_PROBE_TOKEN` | secret, set by hand: the chat assistant's probe token (same value as in Cloudflare Pages); without it the daily answer probe is skipped with a warning |
 | labels | `incident`, `maintenance`, `impact:*`, `component:*` |
 | Pages | source "GitHub Actions", custom domain `status.lktec.org`, HTTPS enforced (only possible once DNS works - run the script again later) |
 | ruleset | copy of `lukislp/demosites`' "main protection": PRs, required checks `test` + `lint`, signed commits, no force pushes/deletion; bypass: the lktec-bot App (always), admins (pull requests) |

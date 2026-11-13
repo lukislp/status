@@ -37,6 +37,8 @@ def attempt_text(diag: dict, with_phase: bool = True) -> str:
 
 def check_detail(check: dict) -> str:
     """The parenthesised part after a check's problem text, for one or two attempts."""
+    if check.get("carried_from"):
+        return f"result of {check['carried_from']}"
     attempts = check.get("attempts") or ([check["diag"]] if check.get("diag") else [])
     if len(attempts) > 1:
         return "; ".join(f"attempt {n}: {attempt_text(a)}" for n, a in enumerate(attempts, 1))
@@ -75,3 +77,38 @@ def component_line(component_id: str, state: dict, checks: list[dict] | None) ->
         latency = state.get("latency_ms")
         detail = state.get("message") or (f"{latency} ms" if latency is not None else "")
     return f"{component_id:<20} {state.get('status', '-'):<12} {detail}"
+
+
+def outcome_text(check: dict) -> str:
+    """`ok`, `degraded: <note>` or `failed: <error>`, for a check with its own interval."""
+    if not check["ok"]:
+        return f"failed: {check['error']}"
+    if check.get("degraded"):
+        return f"degraded: {check.get('degraded_note') or 'reports a degraded state'}"
+    return "slow" if check.get("slow") else "ok"
+
+
+def scheduled_line(component_id: str, check: dict, next_due: str | None = None) -> str:
+    """One extra log line for a check with its own interval: the outcome of this run's probe
+    (HTTP status, latency and the JSON fields named in `report_json_fields`), or which earlier
+    result is carried forward and when the next probe is due. Never a request header."""
+    name = check["name"]
+    if check.get("carried_from"):
+        due = f", next probe at {next_due}" if next_due else ""
+        return f"{component_id:<20} {'':<12} {name}: {outcome_text(check)} (probed {check['carried_from']}{due})"
+    parts = [f"HTTP {check['http_status']}" if check.get("http_status") is not None else "no response"]
+    if check.get("latency_ms") is not None:
+        parts.append(f"{check['latency_ms']} ms")
+    fields = check.get("report") or {}
+    if fields:
+        parts.append(", ".join(f"{k}={v}" for k, v in fields.items()))
+    return f"{component_id:<20} {'':<12} {name}: probed now, {outcome_text(check)} ({'; '.join(parts)})"
+
+
+def skipped_line(component_id: str, check: dict, missing: list[str]) -> str:
+    """A GitHub Actions warning annotation for a check skipped because a secret is not set
+    (variable names only, never a value)."""
+    return (
+        f"::warning::{component_id}: check {check.get('name') or check['url']!r} skipped, "
+        f"{', '.join(missing)} not set"
+    )

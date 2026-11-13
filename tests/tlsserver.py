@@ -41,6 +41,11 @@ class Handler(BaseHTTPRequestHandler):
         self.server.requests += 1
         self.server.behaviour(self)
 
+    def do_POST(self):  # noqa: N802
+        length = int(self.headers.get("Content-Length") or 0)
+        self.server.posted = (self.headers, self.rfile.read(length))
+        self.do_GET()
+
     def log_message(self, *args):
         pass
 

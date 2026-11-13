@@ -38,6 +38,31 @@
               "expect_body_contains": "Körber"
             }
           ]
+        },
+        {
+          "id": "portfolio-chat",
+          "name": "Chat assistant (lktec.org)",
+          "description": "The AI chat assistant on lktec.org: its configuration on every run, a real question and answer once a day.",
+          "checks": [
+            {
+              "name": "Health",
+              "url": "https://lktec.org/api/chat/health",
+              "expect_json": { "ok": true }
+            },
+            {
+              "name": "Answer probe",
+              "url": "https://lktec.org/api/chat/probe",
+              "method": "POST",
+              "headers_from_env": { "X-Status-Probe": "CHAT_PROBE_TOKEN" },
+              "interval_minutes": 1440,
+              "timeout_seconds": 45,
+              "slow_ms": 20000,
+              "expect_json": { "ok": true },
+              "degraded_json": { "degraded": true },
+              "degraded_note": "answered by the fallback model",
+              "report_json_fields": ["provider", "degraded", "ttftMs", "latencyMs", "reason"]
+            }
+          ]
         }
       ]
     },
