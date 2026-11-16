@@ -290,6 +290,28 @@ marks every run of that day as up for all components and records the day in
 Actions cache copy, whichever is newer - and later runs of that day count normally again. It
 was used for 2026-10-31 (planned host maintenance of the demo server).
 
+## Marking an automatic incident as a false alarm
+
+When a check itself was wrong (for example a content check that still expects an old product
+name) and the service was fine, list the incident in `config.json`:
+
+```json
+"false_alarms": [
+  {"incident": "auto-<component>-YYYYMMDD-HHMM", "note": "English explanation", "note_de": "Deutsche Erklärung"}
+]
+```
+
+On the next checker run the incident becomes a check-error notice: the title reads "False alarm:
+check error for <component>" (German: "Fehlalarm: Prüffehler bei ..."), the impact is "none", the
+"was affected for about N min" wording is replaced, a closing update shows the note (a standard
+text when `note` is omitted; `note_de` falls back to `note`), and the page no longer lists the
+component as affected. The incident stays visible for transparency but does not colour any day bar
+or count as an outage. Nothing is sent to Telegram. The incident is flagged `false_alarm` in
+`data/incidents.json`, so the correction is applied exactly once, on the repository copy or the
+Actions cache copy alike. Only resolved incidents are corrected; an id that matches no stored
+incident (for example one past the retention window) is ignored and noted in the run log. The
+day's uptime figures are corrected separately with `uptime_resets`.
+
 Then add the component to the checkbox lists in `.github/ISSUE_TEMPLATE/incident.yml` and
 `maintenance.yml` (CI fails if they drift from the config) and run `scripts/setup-repo.sh` again
 to create its `component:` label.

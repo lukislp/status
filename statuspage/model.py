@@ -291,6 +291,44 @@ def apply_uptime_resets(history: dict, days: list[str]) -> None:
         applied.append(day)
 
 
+def apply_false_alarms(incidents: list[dict], entries: list[dict], names: dict[str, str], stamp: str) -> tuple[list[str], list[str]]:
+    """One-off corrections from `false_alarms` in the config: an automatic incident that the check
+    itself caused (the service was fine) becomes a check-error notice. Its impact drops to "none",
+    the misleading "affected for about N min" wording is replaced, and a closing update says that
+    the service was available throughout. The incident stays on the page for transparency.
+
+    Idempotent without any bookkeeping: a corrected incident carries `false_alarm: true`, so
+    whichever copy (repository or Actions cache) the checker continues from, it is corrected
+    exactly once. Only resolved incidents are corrected. Returns (ids corrected now, ids that match no stored incident - for example
+    because the incident aged out of the retention window)."""
+    by_id = {i["id"]: i for i in incidents if i.get("auto")}
+    applied: list[str] = []
+    unknown: list[str] = []
+    for entry in entries:
+        incident = by_id.get(entry["incident"])
+        if incident is None:
+            unknown.append(entry["incident"])
+            continue
+        if incident.get("false_alarm") or not incident.get("resolved_at"):
+            continue  # already corrected, or still open: the correction waits until the checker closes it
+        cid = incident["components"][0] if incident.get("components") else ""
+        title_tpl = {"key": "false_alarm_title", "component": cid}
+        incident["tpl"] = title_tpl
+        incident["title"] = i18n.render_tpl("en", title_tpl, lambda c: names.get(c, c))
+        incident["impact"] = "none"
+        incident["false_alarm"] = True
+        for update in incident["updates"]:
+            if (update.get("tpl") or {}).get("key") == "auto_resolved":
+                update["tpl"] = {"key": "auto_recovered", "component": cid}
+                update["body"] = i18n.render_tpl("en", update["tpl"], lambda c: names.get(c, c))
+        note_tpl = {"key": "false_alarm_note", **{k: entry[k] for k in ("note", "note_de") if k in entry}}
+        incident["updates"].append(
+            {"status": "false_alarm", "at": stamp, "body": i18n.render_tpl("en", note_tpl, str), "tpl": note_tpl}
+        )
+        applied.append(incident["id"])
+    return applied, unknown
+
+
 def day_uptime(entry: dict | None) -> float | None:
     if not entry or not entry.get("n"):
         return None
@@ -338,7 +376,8 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
 
     `results` maps component id -> evaluated check results (planned components are absent).
     Returns the new data and a summary {"changed": [...ids whose status changed],
-    "opened": [...incident ids], "resolved": [...incident ids]}.
+    "opened": [...incident ids], "resolved": [...incident ids],
+    "false_alarms": [...incident ids corrected in this run], "unknown_false_alarms": [...ids not found]}.
     """
     data = copy.deepcopy(data)
     settings = config["settings"]
@@ -350,6 +389,10 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
     incidents = data["incidents"]["incidents"]
     by_id = {i["id"]: i for i in incidents}
     apply_uptime_resets(data["history"], config.get("uptime_resets") or [])
+    names = {c["id"]: c["name"] for c in all_components(config)}
+    events["false_alarms"], events["unknown_false_alarms"] = apply_false_alarms(
+        incidents, config.get("false_alarms") or [], names, stamp
+    )
 
     for group in config["groups"]:
         for comp in group["components"]:
@@ -471,7 +514,7 @@ def format_duration(minutes: int) -> str:
 def should_publish(events: dict, published_at: str | None, now: datetime, interval_minutes: float) -> bool:
     """Commit and deploy when something visible changed, otherwise at most once per interval.
     Runs in between only update the cached working copy (see the check workflow)."""
-    if events["changed"] or events["opened"] or events["resolved"]:
+    if events["changed"] or events["opened"] or events["resolved"] or events.get("false_alarms"):
         return True
     if not published_at:
         return True

@@ -540,6 +540,10 @@ def render_index(ctx: Context, lang: str) -> str:
 # --------------------------------------------------------------------------- incident pages
 
 
+def impact_label_key(incident: dict) -> str:
+    return "impact.false_alarm" if incident.get("false_alarm") else "impact." + incident["impact"]
+
+
 def render_incident_page(ctx: Context, incident: dict, lang: str) -> str:
     loc = Loc(lang, f"incidents/{incident['id']}.html")
     title = ctx.title(incident, lang)
@@ -556,10 +560,15 @@ def render_incident_page(ctx: Context, incident: dict, lang: str) -> str:
     if incident["impact"] == "maintenance" and incident.get("scheduled_start"):
         window = f'<p class="window">{maintenance_window(incident, lang)}</p>'
     origin = f'<p class="meta">{t(lang, "incident.auto")}</p>' if incident.get("auto") else ""
-    affects = f'<p class="affects">{escape(t(lang, "affects.page", names=affected))}</p>' if affected else ""
+    # A false alarm did not affect the component, so the page does not list it as affected.
+    affects = (
+        f'<p class="affects">{escape(t(lang, "affects.page", names=affected))}</p>'
+        if affected and not incident.get("false_alarm")
+        else ""
+    )
     body = f"""<div class="top-row"><p class="crumb"><a href="{loc.link("index.html")}">&larr; {t(lang, "incident.back")}</a></p>{feed_link(loc)}</div>
 <h1 class="incident-title impact-text-{incident['impact']}">{escape(title)}</h1>
-<p class="impact-pill impact-{incident['impact']}">{t(lang, "impact." + incident['impact'])}</p>
+<p class="impact-pill impact-{incident['impact']}">{t(lang, impact_label_key(incident))}</p>
 {window}{origin}
 <div class="updates">{''.join(rows)}</div>
 {affects}"""

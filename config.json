@@ -25,6 +25,13 @@
     "authors": ["lukislp"]
   },
   "uptime_resets": ["2026-10-31", "2026-11-16"],
+  "false_alarms": [
+    {
+      "incident": "auto-studylife-demo-20261116-0450",
+      "note": "The demo was reachable the whole time. The content check still expected the old name StudyLife after the demo was renamed to StudyAtrium, so it reported a failure that did not exist.",
+      "note_de": "Die Demo war die ganze Zeit erreichbar. Die Inhaltsprüfung erwartete nach der Umbenennung der Demo in StudyAtrium noch den alten Namen StudyLife und meldete deshalb einen Fehler, den es nicht gab."
+    }
+  ],
   "groups": [
     {
       "name": "Website",

@@ -59,6 +59,7 @@ MIN_INTERVAL_MINUTES = 5
 MAINTENANCE_RESPONSE_KEYS = {"status", "body_contains", "header"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+INCIDENT_ID_RE = re.compile(r"^auto-[a-z0-9][a-z0-9-]*-\d{8}-\d{4}$")
 ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 HEADER_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 
@@ -113,13 +114,34 @@ def validate_config(raw: dict) -> dict:
     resets = raw.get("uptime_resets") or []
     if not isinstance(resets, list) or not all(isinstance(d, str) and DAY_RE.match(d) for d in resets):
         raise ConfigError("uptime_resets must be a list of YYYY-MM-DD days")
+    false_alarms = _validate_false_alarms(raw.get("false_alarms") or [])
     return {
         "site": site,
         "settings": settings,
         "groups": groups,
         "issues": {"repo": issues.get("repo", ""), "authors": authors},
         "uptime_resets": resets,
+        "false_alarms": false_alarms,
     }
+
+
+def _validate_false_alarms(raw: object) -> list[dict]:
+    """`false_alarms`: automatic incidents the owner marked as caused by the check itself. Each
+    entry names the incident id and may carry an English `note` and a German `note_de`."""
+    if not isinstance(raw, list):
+        raise ConfigError("false_alarms must be a list")
+    entries = []
+    for item in raw:
+        if not isinstance(item, dict) or set(item) - {"incident", "note", "note_de"}:
+            raise ConfigError("false_alarms entries take only incident, note and note_de")
+        incident = item.get("incident")
+        if not isinstance(incident, str) or not INCIDENT_ID_RE.match(incident):
+            raise ConfigError(f"false_alarms: invalid incident id {incident!r}")
+        for key in ("note", "note_de"):
+            if key in item and not (isinstance(item[key], str) and item[key].strip()):
+                raise ConfigError(f"false_alarms.{key} must be a non-empty string")
+        entries.append(dict(item))
+    return entries
 
 
 def _validate_component(comp: dict, seen: set[str]) -> None:
