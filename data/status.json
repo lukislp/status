@@ -1,12 +1,12 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-11-16T00:04:20Z",
+   "checked_at": "2026-11-16T00:41:50Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 581,
+     "latency_ms": 518,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -15,19 +15,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 581,
+   "latency_ms": 518,
    "message": "",
-   "ok_streak": 867,
+   "ok_streak": 868,
    "open_incident": null,
    "status": "operational"
   },
   "links": {
-   "checked_at": "2026-11-16T00:04:20Z",
+   "checked_at": "2026-11-16T00:41:50Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 374,
+     "latency_ms": 286,
      "name": "Links page",
      "ok": true,
      "phase": null,
@@ -36,19 +36,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 374,
+   "latency_ms": 286,
    "message": "",
-   "ok_streak": 417,
+   "ok_streak": 418,
    "open_incident": null,
    "status": "operational"
   },
   "mowdeck-demo": {
-   "checked_at": "2026-11-16T00:04:20Z",
+   "checked_at": "2026-11-16T00:41:50Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 554,
+     "latency_ms": 631,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -57,19 +57,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 554,
+   "latency_ms": 631,
    "message": "",
-   "ok_streak": 2823,
+   "ok_streak": 2824,
    "open_incident": null,
    "status": "operational"
   },
   "piwatch-demo": {
-   "checked_at": "2026-11-16T00:04:20Z",
+   "checked_at": "2026-11-16T00:41:50Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 643,
+     "latency_ms": 513,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -78,19 +78,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 643,
+   "latency_ms": 513,
    "message": "",
-   "ok_streak": 867,
+   "ok_streak": 868,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio": {
-   "checked_at": "2026-11-16T00:04:20Z",
+   "checked_at": "2026-11-16T00:41:50Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 316,
+     "latency_ms": 222,
      "name": "Home page",
      "ok": true,
      "phase": null,
@@ -99,19 +99,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 316,
+   "latency_ms": 222,
    "message": "",
-   "ok_streak": 2957,
+   "ok_streak": 2958,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio-chat": {
-   "checked_at": "2026-11-16T00:04:20Z",
+   "checked_at": "2026-11-16T00:41:50Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 316,
+     "latency_ms": 220,
      "name": "Health",
      "ok": true,
      "phase": null,
@@ -134,19 +134,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 316,
+   "latency_ms": 220,
    "message": "",
-   "ok_streak": 419,
+   "ok_streak": 420,
    "open_incident": null,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-11-16T00:04:20Z",
+   "checked_at": "2026-11-16T00:41:50Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 609,
+     "latency_ms": 562,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -155,7 +155,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 600,
+     "latency_ms": 569,
      "name": "Demo login API",
      "ok": true,
      "phase": null,
@@ -164,13 +164,13 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 609,
+   "latency_ms": 562,
    "message": "",
-   "ok_streak": 2829,
+   "ok_streak": 2830,
    "open_incident": null,
    "status": "operational"
   }
  },
- "generated_at": "2026-11-16T00:04:20Z",
- "published_at": "2026-11-16T00:04:20Z"
+ "generated_at": "2026-11-16T00:41:50Z",
+ "published_at": "2026-11-16T00:41:50Z"
 }
