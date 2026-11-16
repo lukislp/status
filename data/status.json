@@ -1,12 +1,12 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-11-16T04:25:54Z",
+   "checked_at": "2026-11-16T04:50:48Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 583,
+     "latency_ms": 625,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -15,19 +15,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 583,
+   "latency_ms": 625,
    "message": "",
-   "ok_streak": 889,
+   "ok_streak": 890,
    "open_incident": null,
    "status": "operational"
   },
   "links": {
-   "checked_at": "2026-11-16T04:25:54Z",
+   "checked_at": "2026-11-16T04:50:48Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 312,
+     "latency_ms": 163,
      "name": "Links page",
      "ok": true,
      "phase": null,
@@ -36,19 +36,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 312,
+   "latency_ms": 163,
    "message": "",
-   "ok_streak": 439,
+   "ok_streak": 440,
    "open_incident": null,
    "status": "operational"
   },
   "mowdeck-demo": {
-   "checked_at": "2026-11-16T04:25:54Z",
+   "checked_at": "2026-11-16T04:50:48Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 592,
+     "latency_ms": 726,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -57,19 +57,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 592,
+   "latency_ms": 726,
    "message": "",
-   "ok_streak": 2845,
+   "ok_streak": 2846,
    "open_incident": null,
    "status": "operational"
   },
   "piwatch-demo": {
-   "checked_at": "2026-11-16T04:25:54Z",
+   "checked_at": "2026-11-16T04:50:48Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 586,
+     "latency_ms": 730,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -78,19 +78,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 586,
+   "latency_ms": 730,
    "message": "",
-   "ok_streak": 889,
+   "ok_streak": 890,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio": {
-   "checked_at": "2026-11-16T04:25:54Z",
+   "checked_at": "2026-11-16T04:50:48Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 282,
+     "latency_ms": 190,
      "name": "Home page",
      "ok": true,
      "phase": null,
@@ -99,19 +99,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 282,
+   "latency_ms": 190,
    "message": "",
-   "ok_streak": 2979,
+   "ok_streak": 2980,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio-chat": {
-   "checked_at": "2026-11-16T04:25:54Z",
+   "checked_at": "2026-11-16T04:50:48Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 242,
+     "latency_ms": 167,
      "name": "Health",
      "ok": true,
      "phase": null,
@@ -134,43 +134,43 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 242,
+   "latency_ms": 167,
    "message": "",
-   "ok_streak": 441,
+   "ok_streak": 442,
    "open_incident": null,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-11-16T04:25:54Z",
+   "checked_at": "2026-11-16T04:50:48Z",
    "checks": [
     {
-     "error": null,
+     "error": "expected content missing from the response",
      "http_status": 200,
-     "latency_ms": 604,
+     "latency_ms": 630,
      "name": "Web app",
-     "ok": true,
-     "phase": null,
+     "ok": false,
+     "phase": "body",
      "tls_days_left": 42
     },
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 573,
+     "latency_ms": 744,
      "name": "Demo login API",
      "ok": true,
      "phase": null,
      "tls_days_left": 42
     }
    ],
-   "fail_streak": 0,
-   "first_fail_at": null,
-   "latency_ms": 604,
-   "message": "",
-   "ok_streak": 2851,
+   "fail_streak": 1,
+   "first_fail_at": "2026-11-16T04:50:48Z",
+   "latency_ms": null,
+   "message": "Web app: expected content missing from the response",
+   "ok_streak": 0,
    "open_incident": null,
-   "status": "operational"
+   "status": "degraded"
   }
  },
- "generated_at": "2026-11-16T04:25:54Z",
- "published_at": "2026-11-16T04:25:54Z"
+ "generated_at": "2026-11-16T04:50:48Z",
+ "published_at": "2026-11-16T04:50:48Z"
 }
