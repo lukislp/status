@@ -1,6 +1,6 @@
 ---
 # Copy this file to incidents/<yyyy-mm-dd-short-name>.md (files starting with "_" are ignored).
-title: Studylife demo login fails
+title: StudyAtrium demo login fails
 # Comma-separated component ids from config.json (may be empty for a site-wide notice).
 components: studylife-demo
 # minor | major | critical | none  (maintenance windows go into maintenance/)
@@ -14,4 +14,4 @@ The fix is deployed and demo logins work again.
 An expired demo seed broke the login endpoint. A fix is on its way.
 
 ## investigating 2026-10-30 18:05
-We are investigating failing logins on the **Studylife demo**.
+We are investigating failing logins on the **StudyAtrium demo**.
