@@ -142,9 +142,11 @@ def cmd_check(args) -> int:
         print(report.scheduled_line(cid, result, model.iso(due) if due else None))
     for note in notes:
         print(note)
-    for key in ("changed", "opened", "resolved"):
+    for key in ("changed", "opened", "resolved", "false_alarms"):
         if events[key]:
             print(f"{key}: {', '.join(events[key])}")
+    for incident_id in events["unknown_false_alarms"]:
+        print(f"note: false_alarms entry {incident_id} matches no stored incident (aged out?); ignored")
     print(f"publish: {str(publish).lower()}")
     set_output("publish", str(publish).lower())
     return 0

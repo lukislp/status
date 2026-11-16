@@ -71,8 +71,8 @@ def pending_alerts(data: dict, names: dict[str, str], base_url: str) -> list[Ale
     states = data["status"]["components"]
     due: list[Alert] = []
     for incident in data["incidents"]["incidents"]:
-        if not incident.get("auto"):
-            continue
+        if not incident.get("auto") or incident.get("false_alarm"):
+            continue  # a corrected false alarm never sends anything, not even a late "recovered"
         cid = incident["components"][0] if incident.get("components") else ""
         name = names.get(cid, cid or incident["title"])
         url = f"{base}/en/incidents/{incident['id']}.html"  # alerts are English

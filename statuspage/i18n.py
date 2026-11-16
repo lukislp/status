@@ -57,11 +57,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "update.in-progress": "In progress",
         "update.verifying": "Verifying",
         "update.completed": "Completed",
+        "update.false_alarm": "False alarm",
         "impact.none": "No impact",
         "impact.minor": "Minor",
         "impact.major": "Major",
         "impact.critical": "Critical",
         "impact.maintenance": "Maintenance",
+        "impact.false_alarm": "False alarm",
         # page chrome
         "skip": "Skip to content",
         "brand.home": "{title} home",
@@ -124,6 +126,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "auto.where": "Where it failed - {parts}.",
         "auto.worse": "The problem got worse.",
         "auto.resolved": "Automated checks for {name} are passing again. The component was affected for about {duration}.",
+        "auto.title.false_alarm": "False alarm: check error for {name}",
+        "auto.recovered": "Automated checks for {name} are passing again.",
+        "auto.false_alarm": "The service was available throughout. The automated check was wrong, so the earlier report was a false alarm.",
         "issue.resolved": "This incident has been resolved.",
         "issue.completed": "The maintenance is complete.",
         "duration.min": "{m} min",
@@ -162,11 +167,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "update.in-progress": "In Durchführung",
         "update.verifying": "Wird geprüft",
         "update.completed": "Abgeschlossen",
+        "update.false_alarm": "Fehlalarm",
         "impact.none": "Keine Auswirkung",
         "impact.minor": "Gering",
         "impact.major": "Erheblich",
         "impact.critical": "Kritisch",
         "impact.maintenance": "Wartung",
+        "impact.false_alarm": "Fehlalarm",
         "skip": "Zum Inhalt springen",
         "brand.home": "{title} Startseite",
         "lang.nav": "Sprache",
@@ -225,6 +232,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "auto.where": "Fehlerstelle - {parts}.",
         "auto.worse": "Das Problem hat sich verschärft.",
         "auto.resolved": "Die automatischen Prüfungen für {name} sind wieder erfolgreich. Die Komponente war etwa {duration} beeinträchtigt.",
+        "auto.title.false_alarm": "Fehlalarm: Prüffehler bei {name}",
+        "auto.recovered": "Die automatischen Prüfungen für {name} sind wieder erfolgreich.",
+        "auto.false_alarm": "Der Dienst war durchgehend erreichbar. Die automatische Prüfung hat sich geirrt, die frühere Meldung war ein Fehlalarm.",
         "issue.resolved": "Diese Störung wurde behoben.",
         "issue.completed": "Die Wartung ist abgeschlossen.",
         "duration.min": "{m} Min.",
@@ -314,6 +324,14 @@ def render_tpl(lang: str, tpl: dict, name_of) -> str:
         return f"{t(lang, 'auto.worse')} {tpl.get('message', '')}".strip()
     if key == "auto_resolved":
         return t(lang, "auto.resolved", name=name_of(tpl["component"]), duration=fmt_duration(tpl["minutes"], lang))
+    if key == "auto_recovered":
+        return t(lang, "auto.recovered", name=name_of(tpl["component"]))
+    if key == "false_alarm_title":
+        return t(lang, "auto.title.false_alarm", name=name_of(tpl["component"]))
+    if key == "false_alarm_note":
+        # The owner's own wording when given (German falls back to the English note), else the standard text.
+        note = (tpl.get("note_de") or tpl.get("note")) if lang == "de" else tpl.get("note")
+        return note or t(lang, "auto.false_alarm")
     if key in ("issue_resolved", "issue_completed"):
         return t(lang, "issue." + key.split("_", 1)[1])
     raise KeyError(key)
