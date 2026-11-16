@@ -16,6 +16,7 @@ DEFAULT_SETTINGS = {
     "failure_threshold": 2,
     "recovery_threshold": 2,
     "slow_ms": 5000,
+    "slow_threshold": 5,
     "tls_warn_days": 7,
     "retention_days": 90,
     "publish_interval_minutes": 30,
@@ -34,7 +35,7 @@ SITE_KEYS = {
 }
 # `name_de` / `description_de` are the German page's wording; the plain keys are the English one
 # (and the fallback when a German text is missing).
-COMPONENT_KEYS = {"id", "name", "name_de", "description", "description_de", "planned", "checks"}
+COMPONENT_KEYS = {"id", "name", "name_de", "description", "description_de", "planned", "checks", "slow_threshold"}
 TEXT_KEYS = ("name", "name_de", "description", "description_de")
 CHECK_KEYS = {
     "name",
@@ -92,6 +93,8 @@ def validate_config(raw: dict) -> dict:
         settings[key] = value
     if settings["failure_threshold"] < 1 or settings["recovery_threshold"] < 1:
         raise ConfigError("failure_threshold and recovery_threshold must be at least 1")
+    if settings["slow_threshold"] < 1:
+        raise ConfigError("slow_threshold must be at least 1")
 
     groups = raw.get("groups")
     if not isinstance(groups, list) or not groups:
@@ -159,6 +162,9 @@ def _validate_component(comp: dict, seen: set[str]) -> None:
     for key in TEXT_KEYS:
         if key in comp and (not isinstance(comp[key], str) or not comp[key].strip()):
             raise ConfigError(f"component {cid}: {key} must be a non-empty string")
+    threshold = comp.get("slow_threshold")
+    if threshold is not None and (not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 1):
+        raise ConfigError(f"component {cid}: slow_threshold must be an integer of at least 1")
     checks = comp.get("checks")
     if not isinstance(checks, list) or not checks:
         raise ConfigError(f"component {cid}: at least one check is required")

@@ -202,25 +202,40 @@ def is_maintenance_response(spec: dict | None, response: dict) -> bool:
 # --------------------------------------------------------------------------- component
 
 
-def classify_component(checks: list[dict], fail_streak: int, threshold: int) -> str:
+def classify_component(checks: list[dict], fail_streak: int, threshold: int, slow_active: bool = False) -> str:
     """Component status from this run's check results and its consecutive failed runs
     (including this one). A single failed run is reported as degraded, not as an outage:
-    runners and networks blip, and one blip should not paint the page red."""
+    runners and networks blip, and one blip should not paint the page red. A slow answer is
+    only a problem once it has persisted (`slow_active`, see slow_run_streak); until then it
+    counts as fully operational."""
     failed = [c for c in checks if not c["ok"]]
     if failed:
         if fail_streak < threshold:
             return "degraded"
         return "major" if len(failed) == len(checks) else "partial"
-    if any(c["slow"] or c["tls_warning"] or c.get("degraded") for c in checks):
+    if any((slow_active and c["slow"]) or c["tls_warning"] or c.get("degraded") for c in checks):
         return "degraded"
     return "operational"
 
 
-def check_problem(c: dict) -> str | None:
-    """One line about what is wrong with a check (None when nothing is)."""
+def slow_run_streak(checks: list[dict], previous: int, failed_run: bool) -> int:
+    """Consecutive runs whose answer was correct but slow, including this one. A failed run or a
+    run without a slow answer resets it. A check with its own interval that was only carried
+    forward was not measured in this run, so it neither extends nor resets the streak."""
+    if failed_run:
+        return 0
+    fresh = [c for c in checks if not c.get("carried_from")]
+    if not fresh:
+        return previous
+    return previous + 1 if any(c["slow"] for c in fresh) else 0
+
+
+def check_problem(c: dict, slow_active: bool = False) -> str | None:
+    """One line about what is wrong with a check (None when nothing is). A slow answer is only
+    a problem once the slow streak is active."""
     if not c["ok"]:
         return f"{c['name']}: {c['error']}"
-    if c["slow"]:
+    if c["slow"] and slow_active:
         return f"{c['name']}: slow response ({c['latency_ms']} ms)"
     if c.get("degraded"):
         return f"{c['name']}: {c.get('degraded_note') or 'reports a degraded state'}"
@@ -229,8 +244,8 @@ def check_problem(c: dict) -> str | None:
     return None
 
 
-def component_message(checks: list[dict]) -> str:
-    return "; ".join(p for p in map(check_problem, checks) if p)
+def component_message(checks: list[dict], slow_active: bool = False) -> str:
+    return "; ".join(p for p in (check_problem(c, slow_active) for c in checks) if p)
 
 
 def check_phase(c: dict) -> str | None:
@@ -411,8 +426,10 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
             fail_streak = prev.get("fail_streak", 0) + 1 if failed_run else 0
             ok_streak = 0 if failed_run else prev.get("ok_streak", 0) + 1
             first_fail_at = (prev.get("first_fail_at") or stamp) if failed_run else None
-            status = classify_component(checks, fail_streak, threshold)
-            message = component_message(checks)
+            slow_streak = slow_run_streak(checks, prev.get("slow_streak", 0), failed_run)
+            slow_active = slow_streak >= int(comp.get("slow_threshold", settings["slow_threshold"]))
+            status = classify_component(checks, fail_streak, threshold, slow_active)
+            message = component_message(checks, slow_active)
             open_id = prev.get("open_incident")
             if open_id and open_id not in by_id:
                 open_id = None
@@ -439,6 +456,7 @@ def apply_run(data: dict, config: dict, results: dict[str, list[dict]], now: dat
                 "message": message,
                 "fail_streak": fail_streak,
                 "ok_streak": ok_streak,
+                "slow_streak": slow_streak,
                 "first_fail_at": first_fail_at,
                 "open_incident": open_id,
                 "checks": [stored_check(c, stamp) for c in checks],

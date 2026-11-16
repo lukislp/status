@@ -130,7 +130,9 @@ id; the history format is unchanged. Data files written before the phase existed
 | Situation | Component status |
 | --- | --- |
 | all checks pass | Running |
-| slower than `slow_ms` (5 s) or certificate expires in < `tls_warn_days` (7) | Slow |
+| certificate expires in < `tls_warn_days` (7) | Slow |
+| slower than `slow_ms` (5 s) in `slow_threshold` (5) runs in a row | Slow |
+| a slow answer in fewer runs in a row than that | Running (latency is still recorded) |
 | a check's answer matches its `degraded_json` (the chat answered from its fallback model) | Slow |
 | one failed run | Slow (a single blip is not an outage) |
 | `failure_threshold` (2) failed runs in a row, every check failing | Down |
@@ -163,6 +165,12 @@ Alerts are English and link to the **English** incident page (`/en/incidents/<id
 When an **automatic** incident opens (a component is *Partly down* or *Down* after
 `failure_threshold` failed runs) the checker sends one Telegram message; when it resolves, one
 "Recovered" message. If the incident later gets worse (*Partly down* to *Down*) it sends one more.
+A slow answer is correct, so it is never a failure: it costs no uptime, opens no incident and
+sends no alert. It only turns the component to *Slow* once `slow_threshold` runs in a row were
+slow (a component can set its own `slow_threshold`); one fast run, or a failed run, resets the
+count (`slow_streak` in `status.json`). A check with its own interval that was only carried
+forward does not extend or reset it.
+
 No alert for *Slow*, and none for incidents or maintenance you post yourself.
 
 Setup (once):
@@ -264,7 +272,7 @@ For a check that is more than a GET every run:
 | `method` | `GET` (default) or `POST` (sent with an empty body) |
 | `headers_from_env` | `{"Header-Name": "ENV_VAR"}`: request headers whose values come from the environment (repository secrets passed in `check.yml`); never printed or stored. Unset variable: the check is skipped with a warning |
 | `interval_minutes` | probe at most this often (at least 5) and carry the last result forward in between; needs a `name` unique in the component |
-| `timeout_seconds`, `slow_ms` | this check's own timeout and slow threshold instead of the settings |
+| `timeout_seconds`, `slow_ms` | this check's own timeout and slow limit (milliseconds) instead of the settings |
 | `degraded_json` | top-level fields that mark a passing answer as degraded (shown as *Slow*, counts as up); `degraded_note` is the text for it |
 | `report_json_fields` | top-level JSON fields printed in the workflow log line (never published) |
 
