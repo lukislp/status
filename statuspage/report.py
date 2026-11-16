@@ -46,7 +46,7 @@ def check_detail(check: dict) -> str:
 
 
 def check_text(check: dict) -> str | None:
-    problem = model.check_problem(check)
+    problem = model.check_problem(check, slow_active=True)  # the log always names a slow answer
     if problem is None:
         return None
     detail = check_detail(check)

@@ -10,6 +10,7 @@ SETTINGS = {
     "failure_threshold": 2,
     "recovery_threshold": 2,
     "slow_ms": 5000,
+    "slow_threshold": 5,
     "tls_warn_days": 7,
     "retention_days": 90,
     "publish_interval_minutes": 30,
@@ -115,6 +116,37 @@ class EvaluateCheckTest(unittest.TestCase):
         self.assertTrue(tls["ok"] and tls["tls_warning"])
 
 
+class SlowThresholdConfigTest(unittest.TestCase):
+    def build(self, settings=None, component=None):
+        comp = {"id": "web", "name": "Web", "checks": [{"url": "https://a.example.org"}], **(component or {})}
+        return validate_config(
+            {
+                "site": {"title": "t", "base_url": "https://s.example.org"},
+                "settings": settings or {},
+                "groups": [{"name": "G", "components": [comp]}],
+            }
+        )
+
+    def test_default_and_override(self):
+        self.assertEqual(self.build()["settings"]["slow_threshold"], 5)
+        self.assertEqual(self.build(component={"slow_threshold": 2})["groups"][0]["components"][0]["slow_threshold"], 2)
+
+    def test_rejects_bad_values(self):
+        for bad in ({"slow_threshold": 0}, ):
+            with self.assertRaises(ConfigError):
+                self.build(settings=bad)
+        for bad in (0, 1.5, "5", True):
+            with self.assertRaises(ConfigError):
+                self.build(component={"slow_threshold": bad})
+
+    def test_component_override_applies(self):
+        cfg = self.build(component={"slow_threshold": 2})
+        data = model.empty_data()
+        for n in range(2):
+            data, _ = model.apply_run(data, cfg, {"web": [ok(9000)]}, T0 + n * timedelta(minutes=5))
+        self.assertEqual(data["status"]["components"]["web"]["status"], "degraded")
+
+
 class ClassifyTest(unittest.TestCase):
     def test_all_ok(self):
         self.assertEqual(model.classify_component([ok()], 0, 2), "operational")
@@ -128,8 +160,17 @@ class ClassifyTest(unittest.TestCase):
     def test_confirmed_partial_failure_is_partial(self):
         self.assertEqual(model.classify_component([ok(), fail()], 2, 2), "partial")
 
-    def test_slow_is_degraded(self):
-        self.assertEqual(model.classify_component([ok(latency=9000)], 0, 2), "degraded")
+    def test_slow_is_operational_until_the_streak_is_active(self):
+        self.assertEqual(model.classify_component([ok(latency=9000)], 0, 2), "operational")
+        self.assertEqual(model.classify_component([ok(latency=9000)], 0, 2, slow_active=True), "degraded")
+
+    def test_slow_streak_counts_fresh_slow_runs_and_resets(self):
+        slow, fast = [ok(9000)], [ok(100)]
+        self.assertEqual(model.slow_run_streak(slow, 2, False), 3)
+        self.assertEqual(model.slow_run_streak(fast, 4, False), 0)
+        self.assertEqual(model.slow_run_streak(slow, 4, True), 0)  # a failed run resets
+        carried = [{**ok(9000), "carried_from": "2026-10-30T11:00:00Z"}]
+        self.assertEqual(model.slow_run_streak(carried, 3, False), 3)  # not measured in this run
 
     def test_worst(self):
         self.assertEqual(model.worst(["operational", "maintenance", "partial"]), "partial")
@@ -146,6 +187,43 @@ class ApplyRunTest(unittest.TestCase):
             data, events = model.apply_run(data, cfg, results, start + n * step)
             all_events.append(events)
         return data, all_events
+
+    def test_short_slow_streak_is_fully_operational(self):
+        data, events = self.run_sequence([ok(9000)] * 4)
+        comp = data["status"]["components"]["web"]
+        self.assertEqual(comp["status"], "operational")
+        self.assertEqual(comp["message"], "")
+        self.assertEqual(comp["slow_streak"], 4)
+        self.assertEqual(data["incidents"]["incidents"], [])
+        self.assertEqual([e["changed"] for e in events[1:]], [[]] * 3)
+        day = data["history"]["days"]["web"]["2026-10-30"]
+        self.assertAlmostEqual(model.day_uptime(day), 100.0)
+        self.assertEqual((day["lat_n"], day["lat_sum"], day["lat_max"]), (4, 36000, 9000))
+
+    def test_fifth_slow_run_in_a_row_is_degraded_without_incident_or_alert(self):
+        from statuspage import notify
+
+        data, events = self.run_sequence([ok(9000)] * 5)
+        comp = data["status"]["components"]["web"]
+        self.assertEqual(comp["status"], "degraded")
+        self.assertIn("slow response", comp["message"])
+        self.assertEqual(events[4]["changed"], ["web"])
+        self.assertEqual(data["incidents"]["incidents"], [])
+        self.assertAlmostEqual(model.day_uptime(data["history"]["days"]["web"]["2026-10-30"]), 100.0)
+        self.assertEqual(notify.pending_alerts(data, {"web": "Web"}, "https://status.example.org"), [])
+
+    def test_a_fast_run_resets_the_slow_streak(self):
+        data, _ = self.run_sequence([ok(9000)] * 4 + [ok(100)] + [ok(9000)] * 4)
+        comp = data["status"]["components"]["web"]
+        self.assertEqual((comp["status"], comp["slow_streak"]), ("operational", 4))
+
+    def test_real_failures_are_unchanged_by_slowness(self):
+        data, _ = self.run_sequence([ok(9000), fail(), fail()])
+        day = data["history"]["days"]["web"]["2026-10-30"]
+        self.assertEqual((day["n"], day["fail"]), (3, 2))
+        self.assertEqual(data["status"]["components"]["web"]["status"], "major")
+        self.assertEqual(data["status"]["components"]["web"]["slow_streak"], 0)
+        self.assertEqual(len(data["incidents"]["incidents"]), 1)
 
     def test_rollup_counts_and_uptime(self):
         data, _ = self.run_sequence([ok(100), ok(300), fail(), ok(200)])

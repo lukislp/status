@@ -16,6 +16,7 @@
     "failure_threshold": 2,
     "recovery_threshold": 2,
     "slow_ms": 5000,
+    "slow_threshold": 5,
     "tls_warn_days": 7,
     "retention_days": 90,
     "publish_interval_minutes": 30
