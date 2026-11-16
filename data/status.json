@@ -1,12 +1,12 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-11-16T04:50:48Z",
+   "checked_at": "2026-11-16T05:01:07Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 625,
+     "latency_ms": 418,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -15,19 +15,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 625,
+   "latency_ms": 418,
    "message": "",
-   "ok_streak": 890,
+   "ok_streak": 891,
    "open_incident": null,
    "status": "operational"
   },
   "links": {
-   "checked_at": "2026-11-16T04:50:48Z",
+   "checked_at": "2026-11-16T05:01:07Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 163,
+     "latency_ms": 123,
      "name": "Links page",
      "ok": true,
      "phase": null,
@@ -36,19 +36,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 163,
+   "latency_ms": 123,
    "message": "",
-   "ok_streak": 440,
+   "ok_streak": 441,
    "open_incident": null,
    "status": "operational"
   },
   "mowdeck-demo": {
-   "checked_at": "2026-11-16T04:50:48Z",
+   "checked_at": "2026-11-16T05:01:07Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 726,
+     "latency_ms": 442,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -57,19 +57,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 726,
+   "latency_ms": 442,
    "message": "",
-   "ok_streak": 2846,
+   "ok_streak": 2847,
    "open_incident": null,
    "status": "operational"
   },
   "piwatch-demo": {
-   "checked_at": "2026-11-16T04:50:48Z",
+   "checked_at": "2026-11-16T05:01:07Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 730,
+     "latency_ms": 420,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -78,19 +78,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 730,
+   "latency_ms": 420,
    "message": "",
-   "ok_streak": 890,
+   "ok_streak": 891,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio": {
-   "checked_at": "2026-11-16T04:50:48Z",
+   "checked_at": "2026-11-16T05:01:07Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 190,
+     "latency_ms": 118,
      "name": "Home page",
      "ok": true,
      "phase": null,
@@ -99,19 +99,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 190,
+   "latency_ms": 118,
    "message": "",
-   "ok_streak": 2980,
+   "ok_streak": 2981,
    "open_incident": null,
    "status": "operational"
   },
   "portfolio-chat": {
-   "checked_at": "2026-11-16T04:50:48Z",
+   "checked_at": "2026-11-16T05:01:07Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 167,
+     "latency_ms": 170,
      "name": "Health",
      "ok": true,
      "phase": null,
@@ -134,19 +134,19 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 167,
+   "latency_ms": 170,
    "message": "",
-   "ok_streak": 442,
+   "ok_streak": 443,
    "open_incident": null,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-11-16T04:50:48Z",
+   "checked_at": "2026-11-16T05:01:07Z",
    "checks": [
     {
      "error": "expected content missing from the response",
      "http_status": 200,
-     "latency_ms": 630,
+     "latency_ms": 419,
      "name": "Web app",
      "ok": false,
      "phase": "body",
@@ -155,22 +155,22 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 744,
+     "latency_ms": 439,
      "name": "Demo login API",
      "ok": true,
      "phase": null,
      "tls_days_left": 42
     }
    ],
-   "fail_streak": 1,
+   "fail_streak": 2,
    "first_fail_at": "2026-11-16T04:50:48Z",
    "latency_ms": null,
    "message": "Web app: expected content missing from the response",
    "ok_streak": 0,
-   "open_incident": null,
-   "status": "degraded"
+   "open_incident": "auto-studylife-demo-20261116-0450",
+   "status": "partial"
   }
  },
- "generated_at": "2026-11-16T04:50:48Z",
- "published_at": "2026-11-16T04:50:48Z"
+ "generated_at": "2026-11-16T05:01:07Z",
+ "published_at": "2026-11-16T05:01:07Z"
 }
