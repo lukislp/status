@@ -3,7 +3,7 @@
 Incident file:
 
     ---
-    title: Studylife demo login fails
+    title: StudyAtrium demo login fails
     components: studylife-demo
     impact: major
     ---

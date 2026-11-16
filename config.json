@@ -24,7 +24,7 @@
     "repo": "lukislp/status",
     "authors": ["lukislp"]
   },
-  "uptime_resets": ["2026-10-31"],
+  "uptime_resets": ["2026-10-31", "2026-11-16"],
   "groups": [
     {
       "name": "Website",
@@ -118,15 +118,15 @@
         },
         {
           "id": "studylife-demo",
-          "name": "Studylife demo",
-          "name_de": "Studylife-Demo",
-          "description": "Demo of the Studylife web app, including its demo login API.",
-          "description_de": "Demo der Studylife-Web-App, einschließlich ihrer Demo-Login-API.",
+          "name": "StudyAtrium demo",
+          "name_de": "StudyAtrium-Demo",
+          "description": "Demo of the StudyAtrium web app, including its demo login API.",
+          "description_de": "Demo der StudyAtrium-Web-App, einschließlich ihrer Demo-Login-API.",
           "checks": [
             {
               "name": "Web app",
               "url": "https://studylife-demo.lktec.org",
-              "expect_body_contains": "StudyLife"
+              "expect_body_contains": "StudyAtrium"
             },
             {
               "name": "Demo login API",
