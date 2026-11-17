@@ -5,9 +5,9 @@
     "owner_name": "Lukas Körber",
     "home_url": "https://lktec.org",
     "imprint_url": "https://lktec.org/en/imprint",
-    "privacy_url": "https://lktec.org/en/imprint",
+    "privacy_url": "https://lktec.org/en/imprint#status",
     "imprint_url_de": "https://lktec.org/impressum",
-    "privacy_url_de": "https://lktec.org/impressum",
+    "privacy_url_de": "https://lktec.org/impressum#status",
     "repo_url": "https://github.com/lukislp/status"
   },
   "settings": {
