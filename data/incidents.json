@@ -21,7 +21,7 @@
    "updates": [
     {
      "at": "2026-11-16T05:01:07Z",
-     "body": "Automated checks for StudyAtrium demo are failing. Web app: expected content missing from the response. Where it failed - Web app: the server answered, but not with the expected content.",
+     "body": "Automated checks for Studylife demo are failing. Web app: expected content missing from the response. Where it failed - Web app: the server answered, but not with the expected content.",
      "status": "investigating",
      "tpl": {
       "component": "studylife-demo",
