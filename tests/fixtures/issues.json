@@ -1,8 +1,8 @@
 [
  {
   "number": 1,
-  "title": "Studylife demo logins fail",
-  "body": "### Impact\n\nmajor\n\n### Affected components\n\n- [X] Studylife demo (`studylife-demo`)\n- [ ] MowDeck demo (`mowdeck-demo`)\n\n### What is happening?\n\nDemo logins return an error. We are **looking** into it.",
+  "title": "StudyAtrium demo logins fail",
+  "body": "### Impact\n\nmajor\n\n### Affected components\n\n- [X] StudyAtrium demo (`studylife-demo`)\n- [ ] MowDeck demo (`mowdeck-demo`)\n\n### What is happening?\n\nDemo logins return an error. We are **looking** into it.",
   "user": {"login": "lukislp"},
   "labels": [{"name": "incident"}],
   "state": "closed",
