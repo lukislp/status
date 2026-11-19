@@ -66,7 +66,8 @@
    "created_at": "2026-11-19T15:24:10Z",
    "id": "auto-studylife-demo-20261119-1524",
    "impact": "critical",
-   "resolved_at": null,
+   "recovery_alerted": true,
+   "resolved_at": "2026-11-19T15:42:50Z",
    "title": "StudyAtrium demo is unavailable",
    "tpl": {
     "component": "studylife-demo",
@@ -92,6 +93,16 @@
         "http_status"
        ]
       ]
+     }
+    },
+    {
+     "at": "2026-11-19T15:42:50Z",
+     "body": "Automated checks for StudyAtrium demo are passing again. The component was affected for about 18 min.",
+     "status": "resolved",
+     "tpl": {
+      "component": "studylife-demo",
+      "key": "auto_resolved",
+      "minutes": 18
      }
     }
    ]
