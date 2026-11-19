@@ -1,12 +1,12 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-11-19T15:24:10Z",
+   "checked_at": "2026-11-19T15:30:34Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 565,
+     "latency_ms": 706,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -15,20 +15,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 565,
+   "latency_ms": 706,
    "message": "",
-   "ok_streak": 1477,
+   "ok_streak": 1478,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "links": {
-   "checked_at": "2026-11-19T15:24:10Z",
+   "checked_at": "2026-11-19T15:30:34Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 300,
+     "latency_ms": 619,
      "name": "Links page",
      "ok": true,
      "phase": null,
@@ -37,20 +37,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 300,
+   "latency_ms": 619,
    "message": "",
-   "ok_streak": 1027,
+   "ok_streak": 1028,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "mowdeck-demo": {
-   "checked_at": "2026-11-19T15:24:10Z",
+   "checked_at": "2026-11-19T15:30:34Z",
    "checks": [
     {
      "error": null,
      "http_status": 503,
-     "latency_ms": 3233,
+     "latency_ms": 3224,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -59,20 +59,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 3233,
+   "latency_ms": 3224,
    "message": "",
-   "ok_streak": 3433,
+   "ok_streak": 3434,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "piwatch-demo": {
-   "checked_at": "2026-11-19T15:24:10Z",
+   "checked_at": "2026-11-19T15:30:34Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 694,
+     "latency_ms": 631,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -81,20 +81,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 694,
+   "latency_ms": 631,
    "message": "",
-   "ok_streak": 1477,
+   "ok_streak": 1478,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "portfolio": {
-   "checked_at": "2026-11-19T15:24:10Z",
+   "checked_at": "2026-11-19T15:30:34Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 415,
+     "latency_ms": 158,
      "name": "Home page",
      "ok": true,
      "phase": null,
@@ -103,20 +103,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 415,
+   "latency_ms": 158,
    "message": "",
-   "ok_streak": 3567,
+   "ok_streak": 3568,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "portfolio-chat": {
-   "checked_at": "2026-11-19T15:24:10Z",
+   "checked_at": "2026-11-19T15:30:34Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 406,
+     "latency_ms": 183,
      "name": "Health",
      "ok": true,
      "phase": null,
@@ -139,20 +139,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 406,
+   "latency_ms": 183,
    "message": "",
-   "ok_streak": 1029,
+   "ok_streak": 1030,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-11-19T15:24:10Z",
+   "checked_at": "2026-11-19T15:30:34Z",
    "checks": [
     {
      "error": "HTTP 307",
      "http_status": 307,
-     "latency_ms": 1874,
+     "latency_ms": 2102,
      "name": "Web app",
      "ok": false,
      "phase": "http_status",
@@ -161,23 +161,23 @@
     {
      "error": "HTTP 307",
      "http_status": 307,
-     "latency_ms": 2057,
+     "latency_ms": 2117,
      "name": "Demo login API",
      "ok": false,
      "phase": "http_status",
      "tls_days_left": 39
     }
    ],
-   "fail_streak": 1,
+   "fail_streak": 2,
    "first_fail_at": "2026-11-19T15:24:10Z",
    "latency_ms": null,
    "message": "Web app: HTTP 307; Demo login API: HTTP 307",
    "ok_streak": 0,
-   "open_incident": null,
+   "open_incident": "auto-studylife-demo-20261119-1524",
    "slow_streak": 0,
-   "status": "degraded"
+   "status": "major"
   }
  },
- "generated_at": "2026-11-19T15:24:10Z",
- "published_at": "2026-11-19T15:24:10Z"
+ "generated_at": "2026-11-19T15:30:34Z",
+ "published_at": "2026-11-19T15:30:34Z"
 }

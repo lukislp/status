@@ -55,6 +55,46 @@
      }
     }
    ]
+  },
+  {
+   "alerted": true,
+   "alerted_impact": "critical",
+   "auto": true,
+   "components": [
+    "studylife-demo"
+   ],
+   "created_at": "2026-11-19T15:24:10Z",
+   "id": "auto-studylife-demo-20261119-1524",
+   "impact": "critical",
+   "resolved_at": null,
+   "title": "StudyAtrium demo is unavailable",
+   "tpl": {
+    "component": "studylife-demo",
+    "key": "auto_title",
+    "kind": "major"
+   },
+   "updates": [
+    {
+     "at": "2026-11-19T15:30:34Z",
+     "body": "Automated checks for StudyAtrium demo are failing. Web app: HTTP 307; Demo login API: HTTP 307. Where it failed - Web app: the server answered with an unexpected status; Demo login API: the server answered with an unexpected status.",
+     "status": "investigating",
+     "tpl": {
+      "component": "studylife-demo",
+      "key": "auto_opened",
+      "message": "Web app: HTTP 307; Demo login API: HTTP 307",
+      "where": [
+       [
+        "Web app",
+        "http_status"
+       ],
+       [
+        "Demo login API",
+        "http_status"
+       ]
+      ]
+     }
+    }
+   ]
   }
  ]
 }
