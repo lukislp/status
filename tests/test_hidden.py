@@ -32,13 +32,13 @@ RAW = {
                     "id": SECRET_ID,
                     "name": SECRET_NAME,
                     "hidden": True,
-                    "checks": [{"url": SECRET_URL, "expect_body_contains": '"passwordSignIn":true'}],
+                    "checks": [{"url": SECRET_URL, "expect_body_contains": '"ready":true'}],
                 }
             ],
         },
     ],
 }
-GOOD = b'{"passwordSignIn":true}'
+GOOD = b'{"ready":true}'
 
 
 def reply(body=b"ok", status=200):
@@ -147,7 +147,7 @@ class HiddenNoTraceTest(unittest.TestCase):
     def test_committed_data_never_mentions_it(self):
         for name in ("status.json", "history.json", "incidents.json"):
             text = (self.h.data / name).read_text(encoding="utf-8")
-            for secret in (SECRET_ID, SECRET_NAME, SECRET_HOST, "passwordSignIn"):
+            for secret in (SECRET_ID, SECRET_NAME, SECRET_HOST, "ready"):
                 self.assertNotIn(secret, text, name)
         self.assertEqual(json.loads((self.h.data / "incidents.json").read_text())["incidents"], [])
 
@@ -161,7 +161,7 @@ class HiddenNoTraceTest(unittest.TestCase):
         self.assertTrue(any("/en/" in p.as_posix() for p in files))  # both languages were built
 
     def test_workflow_log_never_mentions_it(self):
-        for secret in (SECRET_ID, SECRET_NAME, SECRET_HOST, "passwordSignIn"):
+        for secret in (SECRET_ID, SECRET_NAME, SECRET_HOST, "ready"):
             self.assertNotIn(secret, self.h.log)
         self.assertIn("hidden checks: 1 ok, 0 failing", self.h.log)
         self.assertIn("hidden checks: 0 ok, 1 failing", self.h.log)
