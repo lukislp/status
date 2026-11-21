@@ -54,6 +54,14 @@ jobs:
           path: .state-cache
           key: status-data-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: status-data-
+      # Hidden components (README): their state is private, so it never goes to data/. It lives
+      # only in this cache; if the cache is evicted the state starts over (at worst one repeated alert).
+      - name: Restore the private state of hidden components
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .hidden-state
+          key: status-hidden-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: status-hidden-
       - name: Send the Telegram test message
         if: ${{ inputs.test_alert }}
         env:
@@ -80,6 +88,10 @@ jobs:
         with:
           path: .state-cache
           key: status-data-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .hidden-state
+          key: status-hidden-${{ github.run_id }}-${{ github.run_attempt }}
       # The commit itself is made by the sync job below (lktec-bot App). This step only hands the
       # changed files of data/ over as an artifact: manifest.txt plus files/<path>, the layout the
       # sync workflow expects. Deletions are not handed over; data/ only ever grows.

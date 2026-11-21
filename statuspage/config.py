@@ -35,7 +35,7 @@ SITE_KEYS = {
 }
 # `name_de` / `description_de` are the German page's wording; the plain keys are the English one
 # (and the fallback when a German text is missing).
-COMPONENT_KEYS = {"id", "name", "name_de", "description", "description_de", "planned", "checks", "slow_threshold"}
+COMPONENT_KEYS = {"id", "name", "name_de", "description", "description_de", "planned", "hidden", "checks", "slow_threshold"}
 TEXT_KEYS = ("name", "name_de", "description", "description_de")
 CHECK_KEYS = {
     "name",
@@ -162,6 +162,10 @@ def _validate_component(comp: dict, seen: set[str]) -> None:
     for key in TEXT_KEYS:
         if key in comp and (not isinstance(comp[key], str) or not comp[key].strip()):
             raise ConfigError(f"component {cid}: {key} must be a non-empty string")
+    if "hidden" in comp and not isinstance(comp["hidden"], bool):
+        raise ConfigError(f"component {cid}: hidden must be true or false")
+    if comp.get("hidden") and comp.get("planned"):
+        raise ConfigError(f"component {cid}: a hidden component cannot be planned (it is never probed)")
     threshold = comp.get("slow_threshold")
     if threshold is not None and (not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 1):
         raise ConfigError(f"component {cid}: slow_threshold must be an integer of at least 1")
@@ -264,3 +268,24 @@ def localized(comp: dict, key: str, lang: str) -> str:
     if lang == "de" and comp.get(f"{key}_de"):
         return comp[f"{key}_de"]
     return comp.get(key) or ""
+
+def _with_groups(config: dict, keep) -> dict:
+    """`config` reduced to the components `keep` accepts; groups left empty are dropped."""
+    groups = []
+    for group in config["groups"]:
+        comps = [c for c in group["components"] if keep(c)]
+        if comps:
+            groups.append({**group, "components": comps})
+    return {**config, "groups": groups}
+
+
+def public_config(config: dict) -> dict:
+    """What the public page, status.json, the feeds, the issue labels and the committed data
+    know about: every component except the hidden ones."""
+    return _with_groups(config, lambda c: not c.get("hidden"))
+
+
+def hidden_config(config: dict) -> dict:
+    """Only the hidden components, for the private run (README: Hidden components). Corrections
+    meant for the public data (`uptime_resets`, `false_alarms`) do not apply to it."""
+    return {**_with_groups(config, lambda c: c.get("hidden")), "uptime_resets": [], "false_alarms": []}

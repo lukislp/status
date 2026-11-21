@@ -14,7 +14,7 @@ from html import escape
 from pathlib import Path
 
 from . import i18n
-from .config import all_components, localized
+from .config import all_components, localized, public_config
 from .i18n import DEFAULT_LANG, LANGS, OTHER, t
 from .manual import maintenance_state, phase
 from .model import (
@@ -724,7 +724,8 @@ def render_feed(ctx: Context, lang: str) -> str:
 
 
 def build_site(config: dict, data: dict, manual: list[dict], now: datetime, assets: Path, out: Path) -> list[Path]:
-    ctx = Context(config, data, manual, now)
+    # Hidden components never reach the page, whoever calls this (README: Hidden components).
+    ctx = Context(public_config(config), data, manual, now)
     if out.exists():
         shutil.rmtree(out)
     written = []

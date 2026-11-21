@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import model, notify, report, schedule
-from .config import ConfigError, all_components, issue_labels, load_config
+from .config import ConfigError, all_components, hidden_config, issue_labels, load_config, public_config
 from .issues import fetch_issues, items_from_issues
 from .manual import IncidentError, load_manual
 from .probe import probe_all
@@ -85,22 +85,18 @@ def cmd_notify_test(args) -> int:
     return 0
 
 
-def cmd_check(args) -> int:
-    config = load_config(args.config)
-    settings = config["settings"]
-    data = load_data(Path(args.data), Path(args.cache) if args.cache else None)
-    now = datetime.now(timezone.utc).replace(microsecond=0)
-    live = [c for c in all_components(config) if not c.get("planned")]
-    # Per check: probe it now, carry its last result forward (a check with its own interval
-    # that is not due yet) or skip it (a secret it needs is not set). Results keep config order.
+def probe_components(comps: list[dict], data: dict, settings: dict, now: datetime, env=os.environ):
+    """Probe `comps` (or carry a result forward / skip a check, see schedule.py). Returns
+    (results per component id, [(id, check, result)] for checks with their own interval, and
+    warning lines for skipped checks). Results keep config order."""
     planned: list[tuple[dict, dict, str, dict | None]] = []
     notes: list[str] = []
-    for comp in live:
+    for comp in comps:
         state = data["status"]["components"].get(comp["id"])
         for check in comp["checks"]:
-            action, previous = schedule.plan_check(check, state, now, os.environ)
+            action, previous = schedule.plan_check(check, state, now, env)
             if action == schedule.SKIP:
-                notes.append(report.skipped_line(comp["id"], check, schedule.missing_env(check, os.environ)))
+                notes.append(report.skipped_line(comp["id"], check, schedule.missing_env(check, env)))
                 continue
             planned.append((comp, check, action, previous))
     to_probe = [(comp, check) for comp, check, action, _ in planned if action == schedule.PROBE]
@@ -108,7 +104,7 @@ def cmd_check(args) -> int:
         [check for _, check in to_probe],
         settings["timeout_seconds"],
         settings["retry_delay_seconds"],
-        headers=[schedule.resolve_headers(check, os.environ) for _, check in to_probe],
+        headers=[schedule.resolve_headers(check, env) for _, check in to_probe],
     )
     fresh = {id(check): response for (_, check), response in zip(to_probe, responses)}
     results: dict[str, list[dict]] = {}
@@ -121,6 +117,44 @@ def cmd_check(args) -> int:
         results.setdefault(comp["id"], []).append(result)
         if check.get("interval_minutes"):
             scheduled.append((comp["id"], check, result))
+    return results, scheduled, notes
+
+
+def run_hidden(config: dict, state_dir: Path, now: datetime, env, post=notify.urllib_post) -> None:
+    """Probe the hidden components and alert for them, leaving no public trace (README: Hidden
+    components). Their state lives only in `state_dir` (restored from and saved to the Actions
+    cache, never committed). The log gets no id, name, URL or error text, only a count."""
+    hidden = hidden_config(config)
+    comps = [c for c in all_components(hidden) if not c.get("planned")]
+    if not comps:
+        return
+    data = read_data(state_dir) or model.empty_data()
+    results, _, notes = probe_components(comps, data, hidden["settings"], now, env)
+    data, _ = model.apply_run(data, hidden, results, now)
+    states = data["status"]["components"]
+    failing = sum(1 for c in comps if states.get(c["id"], {}).get("status") not in (None, "operational"))
+    print(f"hidden checks: {len(comps) - failing} ok, {failing} failing")
+    if notes:
+        print("::warning::hidden checks: a check was skipped because an environment variable is not set")
+    notifier = notify.from_env(env, post)
+    if notifier is not None:
+        names = {c["id"]: c["name"] for c in comps}
+        sent, failed = notify.dispatch(data, notifier, names, config["site"]["base_url"], links=False)
+        if sent:
+            print(f"hidden alerts sent: {len(sent)}")
+        if failed:
+            print(f"::warning title=Telegram alert not delivered::{len(failed)} hidden alert(s) not delivered; retried on the next run")
+    write_data(data, state_dir)
+
+
+def cmd_check(args) -> int:
+    full = load_config(args.config)
+    config = public_config(full)
+    settings = config["settings"]
+    data = load_data(Path(args.data), Path(args.cache) if args.cache else None)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    live = [c for c in all_components(config) if not c.get("planned")]
+    results, scheduled, notes = probe_components(live, data, settings, now)
 
     data, events = model.apply_run(data, config, results, now)
     alerts_sent = send_alerts(data, config, os.environ)
@@ -147,13 +181,17 @@ def cmd_check(args) -> int:
             print(f"{key}: {', '.join(events[key])}")
     for incident_id in events["unknown_false_alarms"]:
         print(f"note: false_alarms entry {incident_id} matches no stored incident (aged out?); ignored")
+    # After the public report on purpose: nothing of the hidden run is part of it.
+    try:
+        run_hidden(full, Path(args.hidden_state), now, os.environ)
+    except Exception:  # noqa: BLE001 - a traceback could quote a hidden URL; the log is public
+        print("::warning::hidden checks failed with an internal error (details withheld from the public log)")
     print(f"publish: {str(publish).lower()}")
     set_output("publish", str(publish).lower())
     return 0
 
-
 def cmd_build(args) -> int:
-    config = load_config(args.config)
+    config = public_config(load_config(args.config))
     ids = {c["id"] for c in all_components(config)}
     manual = load_manual(args.incidents, args.maintenance, ids)
     if args.issues:
@@ -168,7 +206,7 @@ def cmd_build(args) -> int:
 
 
 def cmd_fetch_issues(args) -> int:
-    config = load_config(args.config)
+    config = public_config(load_config(args.config))
     token = os.environ.get("GITHUB_TOKEN", "")
     repo = config["issues"]["repo"] or os.environ.get("GITHUB_REPOSITORY", "")
     if not token or not repo:
@@ -181,13 +219,13 @@ def cmd_fetch_issues(args) -> int:
 
 
 def cmd_labels(args) -> int:
-    for name, description in issue_labels(load_config(args.config)):
+    for name, description in issue_labels(public_config(load_config(args.config))):
         print(f"{name}\t{description}")
     return 0
 
 
 def cmd_validate(args) -> int:
-    config = load_config(args.config)
+    config = public_config(load_config(args.config))
     ids = {c["id"] for c in all_components(config)}
     items = load_manual(args.incidents, args.maintenance, ids)
     maint = sum(1 for i in items if i["impact"] == "maintenance")
@@ -204,6 +242,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     check = sub.add_parser("check", help="probe every component and update data/")
     check.add_argument("--cache", help="directory with the data files of the previous, unpublished run")
+    check.add_argument("--hidden-state", default=str(ROOT / ".hidden-state"), help="private directory with the state of hidden components (never committed)")
     check.add_argument("--force-publish", action="store_true")
     build = sub.add_parser("build", help="render the static site")
     build.add_argument("--assets", default=str(ROOT / "site"))

@@ -262,6 +262,8 @@ Add an entry to a group in `config.json`:
 falls back to `name` / `description`. Imprint and privacy links of the German page can be set with
 `site.imprint_url_de` / `site.privacy_url_de`.
 
+Add `"hidden": true` to keep a component off the page and out of `data/` (see [Hidden components](#hidden-components)).
+
 Check options: `expect_status` (default `200`, or a list), `expect_header` (`{"Name": "value"}`),
 `expect_body_contains`, `expect_json` (top-level fields).
 
@@ -290,6 +292,50 @@ is required, so any other 503, a 502 or a timeout is still an outage. The MowDec
 for its reset every six hours (Caddy answers 503, `Retry-After: 120`, "The MowDeck demo is being
 reset ...").
 
+## Hidden components
+
+A component with `"hidden": true` is probed on the normal schedule and alerts on Telegram (down,
+worse, recovered, exactly once like any automatic incident), but leaves **no trace in anything
+public**. Use it for an instance that must be watched but not announced (for example a review
+instance). It is not rendered on any page or language, not in `status.json` or the feeds, not in
+the overall banner, has no issue label or form, and is not part of `data/` (history, incidents,
+status), so the public repository never records its results.
+
+How it works:
+
+- `config.json` is split by `public_config` / `hidden_config` (`statuspage/config.py`). The
+  public run, the site build, `validate`, the issue labels and `fetch-issues` only see the public
+  half; `render.build_site` filters again, so the page cannot show a hidden component.
+- `check` runs the hidden half after the public one (`run_hidden` in `statuspage/__main__.py`)
+  with the same probe, model and alert code, on its own state in `.hidden-state/` (git-ignored,
+  never under `data/`). That state is the same three files as `data/` (current status, the open
+  automatic incident with its alert markers, history).
+- The state is kept in the **GitHub Actions cache**: `check.yml` restores `.hidden-state/` at the
+  start of every run and saves it at the end (key `status-hidden-<run id>-<attempt>`, restored by
+  the `status-hidden-` prefix, the same scheme as the unpublished public state). It is not a
+  workflow artifact and not in the repository.
+- **Failure mode:** if the cache is evicted (GitHub drops caches unused for 7 days or beyond the
+  10 GB repository limit) or a run fails before saving, the hidden state starts over. An outage
+  that was already alerted can then alert once more; a recovery is only reported for an incident
+  whose "down" alert was recorded. At worst one duplicate alert, never a lost one while the
+  component is down, and nothing public changes.
+- The Telegram message names the component (it only goes to the owner) and, because there is no
+  public incident page, has no link.
+- The public workflow log shows only `hidden checks: N ok, M failing` and `hidden alerts sent: N`:
+  no id, name, URL, error text or incident id. An unexpected error in the hidden run is reduced to
+  a generic warning, so a traceback cannot quote the URL.
+
+What is still visible, so decide before using it for something sensitive: `config.json` is in the
+public repository, so the component's id, name and URL are public there (only its results are
+not). The runner's outbound requests are also listed by the Harden Runner step (egress audit).
+The cache holds only status and incident timings and is readable by workflows of this repository
+(including pull requests from forks that the owner lets run), not by outsiders otherwise.
+
+Current use: `studyatrium-review` (the StudyAtrium review instance, `/api/auth/methods` must
+contain `"passwordSignIn":true`). **To remove it after the review**, delete the `Hidden` group
+(the one component) from `config.json` in a PR; nothing else needs to change. If it was the last
+hidden component the hidden run does nothing and the saved cache entry expires on its own after 7 days
+(or delete it under Actions, Caches, `status-hidden-*`).
 ## Correcting a day's uptime
 
 `"uptime_resets": ["YYYY-MM-DD"]` in `config.json` is a one-off correction: the next checker run
