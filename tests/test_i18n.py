@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from statuspage import diagnosis, i18n, model, notify, render
-from statuspage.config import ConfigError, load_config, localized, validate_config
+from statuspage.config import ConfigError, load_config, localized, public_config, validate_config
 from statuspage.manual import parse_incident
 
 from .test_manual import INCIDENT, MAINTENANCE
@@ -390,7 +390,7 @@ class ConfigTextTest(unittest.TestCase):
         self.assertNotIn("Beschreibung DE", en)
 
     def test_the_real_config_has_german_descriptions_for_every_component(self):
-        cfg = load_config(ROOT / "config.json")
+        cfg = public_config(load_config(ROOT / "config.json"))
         components = [c for g in cfg["groups"] for c in g["components"]]
         self.assertTrue(components)
         for comp in components:

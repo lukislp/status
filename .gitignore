@@ -3,3 +3,4 @@ _site/
 .issues.json
 __pycache__/
 *.pyc
+.hidden-state/

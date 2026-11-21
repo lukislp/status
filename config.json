@@ -163,6 +163,24 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Hidden",
+      "components": [
+        {
+          "id": "studyatrium-review",
+          "name": "StudyAtrium review instance",
+          "hidden": true,
+          "description": "Hidden: probed and alerted on Telegram only, never published (README: Hidden components).",
+          "checks": [
+            {
+              "name": "Sign-in methods",
+              "url": "https://review.studyatrium.app/api/auth/methods",
+              "expect_body_contains": "\"passwordSignIn\":true"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

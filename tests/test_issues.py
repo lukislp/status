@@ -6,13 +6,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from statuspage import render
-from statuspage.config import all_components, issue_labels, load_config
+from statuspage.config import all_components, issue_labels, load_config, public_config
 from statuspage.issues import items_from_issues, parse_body, parse_time, split_keyword, INCIDENT_KEYWORDS
 from statuspage.manual import maintenance_state, phase
 from statuspage.model import empty_data
 
 ROOT = Path(__file__).resolve().parent.parent
-CONFIG = load_config(ROOT / "config.json")
+CONFIG = public_config(load_config(ROOT / "config.json"))  # hidden components have no issue form or label
 IDS = {c["id"] for c in all_components(CONFIG)}
 ISSUES = json.loads((ROOT / "tests" / "fixtures" / "issues.json").read_text(encoding="utf-8"))
 
