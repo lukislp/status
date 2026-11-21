@@ -16,10 +16,10 @@ from statuspage.config import ConfigError, hidden_config, load_config, public_co
 from .test_model import T0
 
 ROOT = Path(__file__).resolve().parent.parent
-SECRET_ID = "review-box"
-SECRET_NAME = "Quiet Review Instance"
-SECRET_HOST = "quiet-review.example.net"
-SECRET_URL = f"https://{SECRET_HOST}/api/auth/methods"
+HIDDEN_ID = "review-box"
+HIDDEN_NAME = "Quiet Review Instance"
+HIDDEN_HOST = "quiet-review.example.net"
+HIDDEN_URL = f"https://{HIDDEN_HOST}/api/auth/methods"
 PUBLIC_URL = "https://a.example.org"
 RAW = {
     "site": {"title": "test status", "base_url": "https://status.example.org"},
@@ -29,10 +29,10 @@ RAW = {
             "name": "Private",
             "components": [
                 {
-                    "id": SECRET_ID,
-                    "name": SECRET_NAME,
+                    "id": HIDDEN_ID,
+                    "name": HIDDEN_NAME,
                     "hidden": True,
-                    "checks": [{"url": SECRET_URL, "expect_body_contains": '"ready":true'}],
+                    "checks": [{"url": HIDDEN_URL, "expect_body_contains": '"ready":true'}],
                 }
             ],
         },
@@ -71,7 +71,7 @@ class Harness:
 
     def probe_all(self, checks, timeout, retry_delay, headers=None):
         return [
-            reply(self.hidden_body, self.hidden_status) if c["url"] == SECRET_URL else reply() for c in checks
+            reply(self.hidden_body, self.hidden_status) if c["url"] == HIDDEN_URL else reply() for c in checks
         ]
 
     def run(self):
@@ -147,8 +147,8 @@ class HiddenNoTraceTest(unittest.TestCase):
     def test_committed_data_never_mentions_it(self):
         for name in ("status.json", "history.json", "incidents.json"):
             text = (self.h.data / name).read_text(encoding="utf-8")
-            for secret in (SECRET_ID, SECRET_NAME, SECRET_HOST, "ready"):
-                self.assertNotIn(secret, text, name)
+            for needle in (HIDDEN_ID, HIDDEN_NAME, HIDDEN_HOST, "ready"):
+                self.assertNotIn(needle, text, name)
         self.assertEqual(json.loads((self.h.data / "incidents.json").read_text())["incidents"], [])
 
     def test_site_never_mentions_it_in_any_language_or_feed(self):
@@ -156,19 +156,19 @@ class HiddenNoTraceTest(unittest.TestCase):
         names = {p.name for p in files}
         self.assertTrue({"index.html", "history.html", "feed.xml", "status.json"} <= names)
         for path, text in files.items():
-            for secret in (SECRET_ID, SECRET_NAME, SECRET_HOST):
-                self.assertNotIn(secret, text, str(path))
+            for needle in (HIDDEN_ID, HIDDEN_NAME, HIDDEN_HOST):
+                self.assertNotIn(needle, text, str(path))
         self.assertTrue(any("/en/" in p.as_posix() for p in files))  # both languages were built
 
     def test_workflow_log_never_mentions_it(self):
-        for secret in (SECRET_ID, SECRET_NAME, SECRET_HOST, "ready"):
-            self.assertNotIn(secret, self.h.log)
+        for needle in (HIDDEN_ID, HIDDEN_NAME, HIDDEN_HOST, "ready"):
+            self.assertNotIn(needle, self.h.log)
         self.assertIn("hidden checks: 1 ok, 0 failing", self.h.log)
         self.assertIn("hidden checks: 0 ok, 1 failing", self.h.log)
 
     def test_state_lives_in_the_private_directory(self):
         data = cli.read_data(self.h.hidden)
-        self.assertIn(SECRET_ID, data["status"]["components"])
+        self.assertIn(HIDDEN_ID, data["status"]["components"])
         (incident,) = data["incidents"]["incidents"]
         self.assertTrue(incident["resolved_at"])
 
@@ -198,14 +198,14 @@ class HiddenAlertsTest(unittest.TestCase):
         h.break_it(2)
         self.assertEqual(len(h.notifier.sent), 1)
         down = h.notifier.sent[0]
-        self.assertIn(SECRET_NAME, down)
+        self.assertIn(HIDDEN_NAME, down)
         self.assertTrue(down.startswith("🔴 Down:"))
         self.assertNotIn("/incidents/", down)  # no link to a page that does not exist
         h.break_it(3)  # still down: no repeat
         self.assertEqual(len(h.notifier.sent), 1)
         h.repair(3)
         self.assertEqual(len(h.notifier.sent), 2)
-        self.assertTrue(h.notifier.sent[1].startswith(f"🟢 Recovered: {SECRET_NAME}"))
+        self.assertTrue(h.notifier.sent[1].startswith(f"🟢 Recovered: {HIDDEN_NAME}"))
         h.repair(2)
         self.assertEqual(len(h.notifier.sent), 2)
 
@@ -228,12 +228,12 @@ class HiddenAlertsTest(unittest.TestCase):
 
     def test_a_hidden_error_leaves_the_public_run_intact(self):
         h = Harness()
-        with mock.patch.object(cli, "run_hidden", side_effect=RuntimeError(SECRET_URL)):
+        with mock.patch.object(cli, "run_hidden", side_effect=RuntimeError(HIDDEN_URL)):
             out = io.StringIO()
             with contextlib.redirect_stdout(out), mock.patch.object(cli, "probe_all", h.probe_all):
                 code = cli.main(["--config", str(h.config), "--data", str(h.data), "check", "--hidden-state", str(h.hidden)])
         self.assertEqual(code, 0)
-        self.assertNotIn(SECRET_HOST, out.getvalue())
+        self.assertNotIn(HIDDEN_HOST, out.getvalue())
         self.assertIn("publish:", out.getvalue())
 
 
