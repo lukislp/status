@@ -90,6 +90,40 @@
               "expect_body_contains": "Lukas Körber — Links"
             }
           ]
+        },
+        {
+          "id": "legal",
+          "name": "Legal pages (legal.lktec.org)",
+          "name_de": "Rechtliche Seiten (legal.lktec.org)",
+          "description": "Privacy policy and support pages of the StudyAtrium app, which the App Store listing links to, and the imprint on lktec.org.",
+          "description_de": "Datenschutzerklärung und Support-Seiten der App StudyAtrium, auf die der App-Store-Eintrag verweist, und das Impressum auf lktec.org.",
+          "checks": [
+            {
+              "name": "StudyAtrium privacy policy (English)",
+              "url": "https://legal.lktec.org/en/studyatrium/",
+              "expect_body_contains": "Privacy policy for the StudyAtrium app"
+            },
+            {
+              "name": "StudyAtrium privacy policy (German)",
+              "url": "https://legal.lktec.org/studyatrium/",
+              "expect_body_contains": "Datenschutzerklärung für die App StudyAtrium"
+            },
+            {
+              "name": "StudyAtrium support (English)",
+              "url": "https://legal.lktec.org/en/studyatrium/support/",
+              "expect_body_contains": "Support for StudyAtrium"
+            },
+            {
+              "name": "StudyAtrium support (German)",
+              "url": "https://legal.lktec.org/studyatrium/support/",
+              "expect_body_contains": "Support für StudyAtrium"
+            },
+            {
+              "name": "Imprint",
+              "url": "https://lktec.org/impressum",
+              "expect_body_contains": "Impressum"
+            }
+          ]
         }
       ]
     },
