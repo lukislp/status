@@ -1,12 +1,12 @@
 {
  "components": {
   "homelabhub-demo": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 715,
+     "latency_ms": 427,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -15,20 +15,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 715,
+   "latency_ms": 427,
    "message": "",
-   "ok_streak": 2787,
+   "ok_streak": 2792,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "legal": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 165,
+     "latency_ms": 75,
      "name": "StudyAtrium privacy policy (English)",
      "ok": true,
      "phase": null,
@@ -37,7 +37,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 157,
+     "latency_ms": 80,
      "name": "StudyAtrium privacy policy (German)",
      "ok": true,
      "phase": null,
@@ -46,7 +46,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 155,
+     "latency_ms": 91,
      "name": "StudyAtrium support (English)",
      "ok": true,
      "phase": null,
@@ -55,7 +55,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 167,
+     "latency_ms": 83,
      "name": "StudyAtrium support (German)",
      "ok": true,
      "phase": null,
@@ -64,7 +64,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 161,
+     "latency_ms": 151,
      "name": "Imprint",
      "ok": true,
      "phase": null,
@@ -73,20 +73,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 165,
+   "latency_ms": 75,
    "message": "",
-   "ok_streak": 865,
+   "ok_streak": 870,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "links": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 174,
+     "latency_ms": 165,
      "name": "Links page",
      "ok": true,
      "phase": null,
@@ -95,20 +95,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 174,
+   "latency_ms": 165,
    "message": "",
-   "ok_streak": 2337,
+   "ok_streak": 2342,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "mowdeck-demo": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 629,
+     "latency_ms": 347,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -117,20 +117,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 629,
+   "latency_ms": 347,
    "message": "",
-   "ok_streak": 4743,
+   "ok_streak": 4748,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "piwatch-demo": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 623,
+     "latency_ms": 336,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -139,20 +139,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 623,
+   "latency_ms": 336,
    "message": "",
-   "ok_streak": 2787,
+   "ok_streak": 2792,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "portfolio": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 179,
+     "latency_ms": 143,
      "name": "Home page",
      "ok": true,
      "phase": null,
@@ -161,20 +161,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 179,
+   "latency_ms": 143,
    "message": "",
-   "ok_streak": 4877,
+   "ok_streak": 4882,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "portfolio-chat": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 126,
+     "latency_ms": 292,
      "name": "Health",
      "ok": true,
      "phase": null,
@@ -197,20 +197,20 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 126,
+   "latency_ms": 292,
    "message": "",
-   "ok_streak": 2339,
+   "ok_streak": 2344,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   },
   "studylife-demo": {
-   "checked_at": "2026-11-26T20:15:49Z",
+   "checked_at": "2026-11-26T20:49:55Z",
    "checks": [
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 624,
+     "latency_ms": 359,
      "name": "Web app",
      "ok": true,
      "phase": null,
@@ -219,7 +219,7 @@
     {
      "error": null,
      "http_status": 200,
-     "latency_ms": 600,
+     "latency_ms": 350,
      "name": "Demo login API",
      "ok": true,
      "phase": null,
@@ -228,14 +228,14 @@
    ],
    "fail_streak": 0,
    "first_fail_at": null,
-   "latency_ms": 624,
+   "latency_ms": 359,
    "message": "",
-   "ok_streak": 1309,
+   "ok_streak": 1314,
    "open_incident": null,
    "slow_streak": 0,
    "status": "operational"
   }
  },
- "generated_at": "2026-11-26T20:15:49Z",
- "published_at": "2026-11-26T20:15:49Z"
+ "generated_at": "2026-11-26T20:49:55Z",
+ "published_at": "2026-11-26T20:49:55Z"
 }
